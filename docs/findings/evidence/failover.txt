@@ -1,0 +1,224 @@
+docker compose --profile producer down --volumes --remove-orphans
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+2026-10-15 19:49:31,776 INFO httpx2: HTTP Request: GET http://localhost:8081/subjects?deleted=false&deleted_only=false&offset=0&limit=-1 "HTTP/1.1 200 OK"
+%3|1792086571.795|FAIL|rdkafka#producer-1| [thrd:localhost:9092/bootstrap]: localhost:9092/bootstrap: Connect to ipv6#[::1]:9092 failed: Connection refused (after 0ms in state CONNECT)
+2026-10-15 19:49:32,804 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=value "HTTP/1.1 404 Not Found"
+2026-10-15 19:49:33,397 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-value/versions?normalize=False "HTTP/1.1 200 OK"
+%3|1792086573.399|FAIL|rdkafka#producer-1| [thrd:localhost:9092/1]: localhost:9092/1: Connect to ipv6#[::1]:9092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792086573.507|FAIL|rdkafka#producer-1| [thrd:localhost:9192/2]: localhost:9192/2: Connect to ipv6#[::1]:9192 failed: Connection refused (after 0ms in state CONNECT)
+[lab] before stop:
+Topic: events	TopicId: AvbO9pSzQXGn4d7umOyqjg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 
+[lab] stopping broker 2, leader of partition 0
+docker compose stop kafka-2
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+%6|1792086590.735|FAIL|rdkafka#producer-1| [thrd:localhost:9192/2]: localhost:9192/2: Disconnected: connection closed by peer: receive 0 after POLLIN (after 16996ms in state UP)
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+[lab] after stop:
+Topic: events	TopicId: AvbO9pSzQXGn4d7umOyqjg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 3	Replicas: 2,3,1	Isr: 3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,3	Elr: 	LastKnownElr: 
+2026-10-15 19:50:51,737 INFO __main__: produced=60000 failed=0
+[lab] restarting broker 2
+docker compose start kafka-2
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+[lab] ok: full ISR for every partition
+[lab] after restart:
+Topic: events	TopicId: AvbO9pSzQXGn4d7umOyqjg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 3	Replicas: 2,3,1	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,3,2	Elr: 	LastKnownElr: 
+%3|1792086658.534|FAIL|rdkafka#consumer-1| [thrd:localhost:9192/bootstrap]: localhost:9192/bootstrap: Connect to ipv6#[::1]:9192 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792086658.641|FAIL|rdkafka#consumer-1| [thrd:localhost:9292/3]: localhost:9292/3: Connect to ipv6#[::1]:9292 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792086658.696|FAIL|rdkafka#consumer-1| [thrd:localhost:9092/1]: localhost:9092/1: Connect to ipv6#[::1]:9092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792086658.756|FAIL|rdkafka#consumer-1| [thrd:GroupCoordinator]: GroupCoordinator: localhost:9292: Connect to ipv6#[::1]:9292 failed: Connection refused (after 0ms in state CONNECT)
+2026-10-15 19:50:59,012 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=value "HTTP/1.1 404 Not Found"
+2026-10-15 19:50:59,013 INFO httpx2: HTTP Request: GET http://localhost:8081/schemas/ids/1?subject=events-value "HTTP/1.1 200 OK"
+2026-10-15 19:50:59,447 INFO __main__: replayed 60000 records in 0.53 s
+[lab] produced=60000 replayed=60000
+[lab] PASS: every acknowledged event was replayed exactly once after losing the leader of partition 0
+
+################################################################################
+# FOLLOW-UP (run by hand after the script above; leader of partition 0 is now broker 3)
+################################################################################
+
+## Broker 2 (old leader of partition 0) was sent SIGTERM at:
+[2026-10-15 17:49:48,637] INFO Terminating process due to signal SIGTERM (org.apache.kafka.common.utils.LoggingSignalHandler)
+
+## Broker 3 received leadership of events-0 (first lines after the stop):
+[2026-10-15 17:49:49,188] INFO Received leadership notifications with leader partitions [AvbO9pSzQXGn4d7umOyqjg:events-0, AvbO9pSzQXGn4d7umOyqjg:events-1] and follower partitions [AvbO9pSzQXGn4d7umOyqjg:events-2] (org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager)
+[2026-10-15 17:49:49,188] INFO Cancelling the follower task: class kafka.log.remote.RemoteLogManager$RLMFollowerTask[AvbO9pSzQXGn4d7umOyqjg:events-0] (kafka.log.remote.RemoteLogManager)
+
+## Offload before the follow-up batch: first segment of partition 0 was copied by broker 3 (new leader); broker 2 never copied anything:
+-- kafka-1
+[2026-10-15 17:50:25,637] INFO [RemoteLogManager=1 partition=AvbO9pSzQXGn4d7umOyqjg:events-2] Copying 00000000000000000000.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:50:25,901] INFO [RemoteLogManager=1 partition=AvbO9pSzQXGn4d7umOyqjg:events-2] Copied 00000000000000000000.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-2, id=AvhxYqArS1yf5cr-yRKsBg} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:51:25,907] INFO [RemoteLogManager=1 partition=AvbO9pSzQXGn4d7umOyqjg:events-2] Copying 00000000000000013204.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:51:25,950] INFO [RemoteLogManager=1 partition=AvbO9pSzQXGn4d7umOyqjg:events-2] Copied 00000000000000013204.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-2, id=H8R-QF54QHGEl_80XcMGGQ} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+-- kafka-2
+-- kafka-3
+[2026-10-15 17:50:25,626] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-1] Copying 00000000000000000000.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:50:25,897] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-1] Copied 00000000000000000000.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-1, id=x2YpFS0gRDWaHqKKBbHNtg} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:50:29,192] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-0] Copying 00000000000000000000.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:50:29,339] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-0] Copied 00000000000000000000.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-0, id=YLuEEqo1Qr6FIZXUfVfJ4w} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:51:24,345] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-0] Copying 00000000000000013231.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:51:24,493] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-0] Copied 00000000000000013231.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-0, id=iyXku35DSTihCEBeWCTEGg} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:51:25,905] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-1] Copying 00000000000000013201.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:51:26,045] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-1] Copied 00000000000000013201.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-1, id=Tg4G-z7TQymyIrNsZ3blYg} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+
+## Follow-up batch, started 2026-10-15T17:51:28Z:  make -s batch N=20000 START=60000
+{"produced":20000,"failed":0,"first_seq":60000,"last_seq":79999}
+
+## Copying/Copied lines logged since the follow-up batch started (2026-10-15T17:51:28Z), per broker:
+-- kafka-1
+[2026-10-15 17:52:05,957] INFO [RemoteLogManager=1 partition=AvbO9pSzQXGn4d7umOyqjg:events-2] Copying 00000000000000019919.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:52:06,012] INFO [RemoteLogManager=1 partition=AvbO9pSzQXGn4d7umOyqjg:events-2] Copied 00000000000000019919.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-2, id=39WU5S3GTt6MC-yMtBxzjg} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+-- kafka-2
+-- kafka-3
+[2026-10-15 17:52:04,499] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-0] Copying 00000000000000020118.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:52:04,609] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-0] Copied 00000000000000020118.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-0, id=iWdC0u7CTMKOcETw-su7JQ} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:52:06,057] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-1] Copying 00000000000000019963.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:52:06,208] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-1] Copied 00000000000000019963.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=AvbO9pSzQXGn4d7umOyqjg:events-1, id=EwdrS09CSPODZ_iBj6IFxg} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+
+## make topic-describe (after the follow-up batch)
+Topic: events	TopicId: AvbO9pSzQXGn4d7umOyqjg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 3	Replicas: 2,3,1	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,3,2	Elr: 	LastKnownElr: 
+
+## make ls-minio (after the follow-up batch; note partition 0 has a third segment, base offset 20118, uploaded 17:52:04)
+[2026-10-15 17:50:29 UTC] 4.7KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000000000-YLuEEqo1Qr6FIZXUfVfJ4w.indexes
+[2026-10-15 17:50:29 UTC]1024KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000000000-YLuEEqo1Qr6FIZXUfVfJ4w.log
+[2026-10-15 17:50:29 UTC]   749B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000000000-YLuEEqo1Qr6FIZXUfVfJ4w.rsm-manifest
+[2026-10-15 17:51:24 UTC] 2.5KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000013231-iyXku35DSTihCEBeWCTEGg.indexes
+[2026-10-15 17:51:24 UTC] 534KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000013231-iyXku35DSTihCEBeWCTEGg.log
+[2026-10-15 17:51:24 UTC]   746B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000013231-iyXku35DSTihCEBeWCTEGg.rsm-manifest
+[2026-10-15 17:52:04 UTC]   105B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000020118-iWdC0u7CTMKOcETw-su7JQ.indexes
+[2026-10-15 17:52:04 UTC] 453KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000020118-iWdC0u7CTMKOcETw-su7JQ.log
+[2026-10-15 17:52:04 UTC]   736B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/0/00000000000000020118-iWdC0u7CTMKOcETw-su7JQ.rsm-manifest
+[2026-10-15 17:50:25 UTC] 4.7KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000000000-x2YpFS0gRDWaHqKKBbHNtg.indexes
+[2026-10-15 17:50:25 UTC]1024KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000000000-x2YpFS0gRDWaHqKKBbHNtg.log
+[2026-10-15 17:50:25 UTC]   739B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000000000-x2YpFS0gRDWaHqKKBbHNtg.rsm-manifest
+[2026-10-15 17:51:25 UTC] 2.4KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000013201-Tg4G-z7TQymyIrNsZ3blYg.indexes
+[2026-10-15 17:51:25 UTC] 524KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000013201-Tg4G-z7TQymyIrNsZ3blYg.log
+[2026-10-15 17:51:25 UTC]   743B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000013201-Tg4G-z7TQymyIrNsZ3blYg.rsm-manifest
+[2026-10-15 17:52:06 UTC]    98B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000019963-EwdrS09CSPODZ_iBj6IFxg.indexes
+[2026-10-15 17:52:06 UTC] 467KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000019963-EwdrS09CSPODZ_iBj6IFxg.log
+[2026-10-15 17:52:06 UTC]   735B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/1/00000000000000019963-EwdrS09CSPODZ_iBj6IFxg.rsm-manifest
+[2026-10-15 17:50:25 UTC] 4.7KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000000000-AvhxYqArS1yf5cr-yRKsBg.indexes
+[2026-10-15 17:50:25 UTC]1024KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000000000-AvhxYqArS1yf5cr-yRKsBg.log
+[2026-10-15 17:50:25 UTC]   739B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000000000-AvhxYqArS1yf5cr-yRKsBg.rsm-manifest
+[2026-10-15 17:51:25 UTC] 2.4KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000013204-H8R-QF54QHGEl_80XcMGGQ.indexes
+[2026-10-15 17:51:25 UTC] 520KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000013204-H8R-QF54QHGEl_80XcMGGQ.log
+[2026-10-15 17:51:25 UTC]   743B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000013204-H8R-QF54QHGEl_80XcMGGQ.rsm-manifest
+[2026-10-15 17:52:05 UTC]    78B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000019919-39WU5S3GTt6MC-yMtBxzjg.indexes
+[2026-10-15 17:52:05 UTC] 457KiB STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000019919-39WU5S3GTt6MC-yMtBxzjg.log
+[2026-10-15 17:52:06 UTC]   735B STANDARD events-AvbO9pSzQXGn4d7umOyqjg/2/00000000000000019919-39WU5S3GTt6MC-yMtBxzjg.rsm-manifest
+5.9MiB	27 objects	kafka-tiered
+
+## make replay (after the follow-up batch), window 2026-10-15T17:53:46Z .. 2026-10-15T17:53:48Z
+{"consumed": 80000, "partitions": {"0": {"consumed": 26701, "first_offset": 0, "last_offset": 26700, "high_watermark": 26701}, "1": {"consumed": 26747, "first_offset": 0, "last_offset": 26746, "high_watermark": 26747}, "2": {"consumed": 26552, "first_offset": 0, "last_offset": 26551, "high_watermark": 26552}}, "seconds": 0.62}
+
+## RemoteLogReader lines for events-0 (all on broker 3, the new leader) during that replay:
+[2026-10-15 17:53:47,541] DEBUG Reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
+[2026-10-15 17:53:47,547] DEBUG Finished reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
+[2026-10-15 17:53:47,572] DEBUG Reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
+[2026-10-15 17:53:47,582] DEBUG Finished reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
+[2026-10-15 17:53:47,585] DEBUG Reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
+[2026-10-15 17:53:47,596] DEBUG Finished reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
+
+## RemoteLogReader lines for events-0 on brokers 1 and 2 during that replay (expect none):
+-- kafka-1
+-- kafka-2

@@ -1,0 +1,4 @@
+Topic: events	TopicId: JPJMm7XzScWTiF45EfLS6g	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 

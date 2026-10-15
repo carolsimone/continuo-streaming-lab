@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "lab.events",
+  "fields": [
+    {"name": "order_id", "type": "string"},
+    {"name": "customer_id", "type": "string"},
+    {"name": "event_type", "type": "string"},
+    {"name": "amount_cents", "type": "long"},
+    {"name": "currency", "type": "string"},
+    {"name": "event_ts_ms", "type": "long"}
+  ]
+}

@@ -1,0 +1,12 @@
+== kafka-1
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-0/00000000000000020118.log
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-1/00000000000000019963.log
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-2/00000000000000019919.log
+== kafka-2
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-0/00000000000000020118.log
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-1/00000000000000019963.log
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-2/00000000000000019919.log
+== kafka-3
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-0/00000000000000020118.log
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-1/00000000000000019963.log
+-rw-r--r-- 1 appuser appuser 0 Oct 15 17:43 /var/lib/kafka/data/events-2/00000000000000019919.log

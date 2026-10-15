@@ -1,0 +1,39 @@
+# .log files per partition per broker (docker compose exec kafka-N ls <dir> | grep -c '\.log$'), captured after the replays
+== kafka-1
+/var/lib/kafka/data/events-0: 1 .log file(s)
+/var/lib/kafka/data/events-1: 1 .log file(s)
+/var/lib/kafka/data/events-2: 1 .log file(s)
+== kafka-2
+/var/lib/kafka/data/events-0: 1 .log file(s)
+/var/lib/kafka/data/events-1: 1 .log file(s)
+/var/lib/kafka/data/events-2: 1 .log file(s)
+== kafka-3
+/var/lib/kafka/data/events-0: 1 .log file(s)
+/var/lib/kafka/data/events-1: 1 .log file(s)
+/var/lib/kafka/data/events-2: 1 .log file(s)
+
+# /var/lib/kafka/data/remote-log-index-cache on each broker (ls -l --time-style=+%H:%M:%S, UTC)
+== kafka-1
+total 16
+-rw-r--r-- 1 264 17:44:02 0_uPNwK786S9qqvh_FL0Lsng.index
+-rw-r--r-- 1 372 17:44:02 0_uPNwK786S9qqvh_FL0Lsng.timeindex
+-rw-r--r-- 1   0 17:44:02 0_uPNwK786S9qqvh_FL0Lsng.txnindex
+-rw-r--r-- 1  32 17:44:02 14549_HI4OnvyQRlK9eaB8fQoFHQ.index
+-rw-r--r-- 1  36 17:44:02 14549_HI4OnvyQRlK9eaB8fQoFHQ.timeindex
+-rw-r--r-- 1   0 17:44:02 14549_HI4OnvyQRlK9eaB8fQoFHQ.txnindex
+== kafka-2
+total 12
+-rw-r--r-- 1  0 17:44:02 0_4nsFJpe5STmh5PGM_Hwllw.index
+-rw-r--r-- 1 12 17:44:02 0_4nsFJpe5STmh5PGM_Hwllw.timeindex
+-rw-r--r-- 1  0 17:44:02 0_4nsFJpe5STmh5PGM_Hwllw.txnindex
+-rw-r--r-- 1 24 17:44:02 10000_w-9lO0pbRpesReScP-mwdg.index
+-rw-r--r-- 1 36 17:44:02 10000_w-9lO0pbRpesReScP-mwdg.timeindex
+-rw-r--r-- 1  0 17:44:02 10000_w-9lO0pbRpesReScP-mwdg.txnindex
+== kafka-3
+total 16
+-rw-r--r-- 1 40 17:44:02 0_gxzsnnpSQDy8MGr9LQpHsQ.index
+-rw-r--r-- 1 60 17:44:02 0_gxzsnnpSQDy8MGr9LQpHsQ.timeindex
+-rw-r--r-- 1  0 17:44:02 0_gxzsnnpSQDy8MGr9LQpHsQ.txnindex
+-rw-r--r-- 1 24 17:44:02 14688_4_hOVokWSLWhaxjWQcjOcA.index
+-rw-r--r-- 1 36 17:44:02 14688_4_hOVokWSLWhaxjWQcjOcA.timeindex
+-rw-r--r-- 1  0 17:44:02 14688_4_hOVokWSLWhaxjWQcjOcA.txnindex
