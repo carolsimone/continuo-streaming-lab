@@ -14,14 +14,14 @@ License: Apache-2.0.
 
 ### Prerequisites
 
-Docker with Compose v2, `uv`, `make`, `curl` and `unzip`. No JDK is needed: Kafka runs in containers
+Docker with Compose v2, `uv`, `make`, `curl`, `unzip`, `shasum` (checks the plugin download in `make plugin`) and a host `python3` (the shell scripts in `scripts/` use it to read JSON). No JDK is needed: Kafka runs in containers
 and the Python tools run through `uv`.
 
 The first `make up` downloads the Aiven plugin (version pinned, checksum-verified) into `./plugin`.
 If a default host port is already taken, copy the variable you need into a gitignored `.env` file
 next to `compose.yml`, for example `MINIO_API_PORT=19000` and `MINIO_CONSOLE_PORT=19001` (the
 overridable ports are `MINIO_API_PORT`, `MINIO_CONSOLE_PORT`, `KAFKA_1_PORT`, `KAFKA_2_PORT`,
-`KAFKA_3_PORT` and `SCHEMA_REGISTRY_PORT`). The commands below assume the default ports.
+`KAFKA_3_PORT` and `SCHEMA_REGISTRY_PORT`). `make`, the scripts in `scripts/` and `tests/smoke/` read the same `.env`, so `make replay`, `make batch` and the smoke tests follow the overridden ports; a value already set in your shell wins over `.env`. The commands below assume the default ports.
 
 ### Quickstart
 
@@ -81,7 +81,18 @@ ISR shrink, then re-form once the broker is back. The producer keeps going.
 ```bash
 make produce-stop
 ```
-Stops the producer; it flushes and prints how many events it produced.
+Stops the producer; it flushes, and the make target then prints the last two lines of the producer's
+container log, which end with a JSON summary of how many events it produced.
+
+```bash
+make rebuild
+```
+Wipes the containers and all data, rebuilds the producer image and starts the stack again from scratch.
+
+```bash
+docker compose logs kafka-1 kafka-2 kafka-3 | grep ' Copied '
+```
+Shows which broker uploaded which segment (the lines the plugin's copy task logs per uploaded segment).
 
 ```bash
 make clean

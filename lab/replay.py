@@ -34,10 +34,15 @@ def summarize(offsets: dict[int, list[int]], high_watermarks: dict[int, int], se
 
 
 def partition_ids(topics: dict, topic: str) -> list[int]:
-    """Sorted partition ids of `topic`, or an explicit error when the broker does not know it."""
-    if topic not in topics:
+    """Sorted partition ids of `topic`, or an explicit error when the broker does not know it.
+
+    `topics` maps names to TopicMetadata. For an unknown topic librdkafka still returns an entry,
+    with `.error` set and no partitions, so absence from the dict is not the only "not found".
+    """
+    meta = topics.get(topic)
+    if meta is None or meta.error is not None or not meta.partitions:
         raise LookupError(f"topic '{topic}' not found")
-    return sorted(topics[topic])
+    return sorted(meta.partitions)
 
 
 def accept(seen: list[int], offset: int, high: int) -> bool:
@@ -71,8 +76,7 @@ def replay(args: argparse.Namespace) -> dict:
         }
     )
     try:
-        topics = {name: meta.partitions for name, meta in consumer.list_topics(args.topic, timeout=30).topics.items()}
-        partitions = partition_ids(topics, args.topic)
+        partitions = partition_ids(consumer.list_topics(args.topic, timeout=30).topics, args.topic)
         marks = {p: consumer.get_watermark_offsets(TopicPartition(args.topic, p), timeout=30) for p in partitions}
         low = {p: m[0] for p, m in marks.items()}
         high = {p: m[1] for p, m in marks.items()}

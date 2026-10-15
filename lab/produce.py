@@ -46,6 +46,7 @@ def build_producer(bootstrap: str, registry_url: str, schema_str: str) -> Serial
             "key.serializer": StringSerializer("utf_8"),
             "value.serializer": AvroSerializer(registry, schema_str),
             "linger.ms": 20,
+            "enable.idempotence": True,  # retries must not duplicate records (matters during leader failover)
         }
     )
 

@@ -8,6 +8,10 @@ Commands: `make up`, `make topic-describe`, `make batch N=60000` (the topic itse
 
 Cluster: 3 brokers (Apache Kafka 4.0.0 in KRaft mode, each broker also a controller), MinIO, Karapace (`compose.yml`). Topic settings, from `stage1-topic-describe.txt`: 3 partitions, replication factor 3, `min.insync.replicas=2`, `segment.bytes=1048576`, `local.retention.ms=30000`, `retention.ms=-1`, `remote.storage.enable=true`. (`local.retention.ms` is 30 s, the `compose.yml` default.) The broker-side tiering knobs that matter for timing are in `compose.yml`: `KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000` and `KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 5000`.
 
+The plugin's metadata topic `__remote_log_metadata` (where the brokers record which segments exist in the bucket) has, as observed with `kafka-topics.sh --describe` on the running stack, 50 partitions, replication factor 3 and `min.insync.replicas=2`, with all 50 partitions showing a 3-broker ISR (`stage1-remote-log-metadata-describe.txt`; the setting behind it is `KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 3` in `compose.yml`).
+
+Not demonstrated in this stage: that records with the same key land in the same partition. The batch events carry unique `order_id`s, so no run here repeated a key, and the evidence shows only that records are spread over the 3 partitions, not how keys map to them.
+
 ## How partitions spread over brokers
 
 From `docs/findings/evidence/stage1-topic-describe.txt`:

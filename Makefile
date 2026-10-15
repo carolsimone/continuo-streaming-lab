@@ -10,6 +10,15 @@ S3_SHA256      := 3e0ea6ce17033c1fcf74e0f6f292411cb3e2afcc1798b51125bb15e5b75000
 
 COMPOSE := docker compose
 
+# Port overrides from a gitignored .env (KEY=value lines) reach the host tools too, not just compose.
+# As in compose, a value already set in the shell wins over .env. A variable that neither sets is
+# exported empty, which compose (`${VAR:-default}`) and lab/endpoints.py both treat as unset.
+PORT_VARS := KAFKA_1_PORT KAFKA_2_PORT KAFKA_3_PORT SCHEMA_REGISTRY_PORT MINIO_API_PORT MINIO_CONSOLE_PORT
+$(foreach v,$(PORT_VARS),$(if $($(v)),$(eval _shell_$(v) := $($(v)))))
+-include .env
+$(foreach v,$(PORT_VARS),$(if $(_shell_$(v)),$(eval $(v) := $(_shell_$(v)))))
+export $(PORT_VARS)
+
 # Producer knobs: `make produce COUNT=10000 RATE=200` (COUNT=0 runs until `make produce-stop`).
 COUNT ?= 0
 RATE  ?= 50
@@ -70,6 +79,7 @@ produce: up ## Start the producer in the background (COUNT, RATE)
 
 produce-stop: ## Stop the producer (graceful flush)
 	$(COMPOSE) --profile producer stop producer
+	@$(COMPOSE) --profile producer logs --no-log-prefix --tail=2 producer
 
 batch: ## Produce a finite batch from the host (N=20000, PACE=0, SCHEMA=v1, START=0)
 	uv run python -m lab.produce --count $(or $(N),20000) --rate $(or $(PACE),0) \

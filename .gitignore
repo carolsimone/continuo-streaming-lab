@@ -6,3 +6,4 @@ article/
 .venv/
 .pytest_cache/
 .DS_Store
+.superpowers/

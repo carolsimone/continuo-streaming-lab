@@ -200,3 +200,25 @@ def test_main_exits_1_but_still_prints_json_when_stop_flush_times_out(monkeypatc
     out = capsys.readouterr().out.strip().splitlines()
     assert len(out) == 1
     assert json.loads(out[0]) == {"produced": 0, "failed": 2, "first_seq": 0, "last_seq": 1}
+
+
+def test_build_producer_is_idempotent(monkeypatch):
+    captured = {}
+
+    class FakeRegistry:
+        def __init__(self, conf):
+            pass
+
+        def get_subjects(self):
+            return []
+
+    class FakeSerializingProducer:
+        def __init__(self, conf):
+            captured.update(conf)
+
+    monkeypatch.setattr(produce, "SchemaRegistryClient", FakeRegistry)
+    monkeypatch.setattr(produce, "AvroSerializer", lambda registry, schema: object())
+    monkeypatch.setattr(produce, "SerializingProducer", FakeSerializingProducer)
+    produce.build_producer("localhost:9092", "http://localhost:8081", "{}")
+    assert captured["enable.idempotence"] is True
+    assert captured["bootstrap.servers"] == "localhost:9092"

@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 
 from lab.replay import accept, done, parse_args, partition_ids, summarize
@@ -60,10 +62,26 @@ def test_accept_ignores_offsets_beyond_start_time_watermark_and_duplicates():
     assert accept([], 5, high=8) is True  # first record after a log start of 5
 
 
+def meta(partitions, error=None):
+    return SimpleNamespace(partitions=partitions, error=error)
+
+
 def test_partition_ids_sorted():
-    assert partition_ids({"events": {2: None, 0: None, 1: None}}, "events") == [0, 1, 2]
+    assert partition_ids({"events": meta({2: None, 0: None, 1: None})}, "events") == [0, 1, 2]
 
 
 def test_partition_ids_missing_topic_has_explicit_message():
     with pytest.raises(LookupError, match="topic 'events' not found"):
         partition_ids({}, "events")
+
+
+def test_partition_ids_librdkafka_unknown_topic_entry():
+    # For a topic the broker does not know, librdkafka still returns an entry: .error set, no partitions.
+    unknown = meta({}, error="UNKNOWN_TOPIC_OR_PART")
+    with pytest.raises(LookupError, match="topic 'events' not found"):
+        partition_ids({"events": unknown}, "events")
+
+
+def test_partition_ids_topic_without_partitions():
+    with pytest.raises(LookupError, match="topic 'events' not found"):
+        partition_ids({"events": meta({})}, "events")
