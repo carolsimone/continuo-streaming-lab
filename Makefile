@@ -17,7 +17,7 @@ RATE  ?= 50
 # Broker to stop/start: `make broker-stop BROKER=2`.
 BROKER ?=
 
-KAFKA_TOPICS := /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092
+KAFKA_TOPICS = /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-$(or $(VIA),1):19092
 MC := $(COMPOSE) run --rm --no-deps -T --entrypoint sh minio-init -c
 
 .DEFAULT_GOAL := help
@@ -78,8 +78,8 @@ batch: ## Produce a finite batch from the host (N=20000, PACE=0, SCHEMA=v1, STAR
 topic: ## (Re)create the tiered events topic (PARTITIONS, REPLICATION_FACTOR, SEGMENT_BYTES, SEGMENT_MS, LOCAL_RETENTION_MS)
 	scripts/create-topic.sh
 
-topic-describe: ## Leader, replicas and in-sync replicas per partition
-	$(COMPOSE) exec kafka-1 $(KAFKA_TOPICS) --describe --topic events
+topic-describe: ## Leader, replicas and in-sync replicas per partition (VIA=n asks broker n, default 1)
+	$(COMPOSE) exec kafka-$(or $(VIA),1) $(KAFKA_TOPICS) --describe --topic events
 
 ls-minio: ## List tiered objects in MinIO (per partition)
 	@$(MC) 'mc alias set l http://minio:9000 minioadmin minioadmin >/dev/null && mc ls -r l/kafka-tiered; mc du l/kafka-tiered'
