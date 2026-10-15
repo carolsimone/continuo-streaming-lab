@@ -40,7 +40,7 @@ Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2
 Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,3,2
 ```
 
-Broker 3's log shows the handover about one second after broker 2 received SIGTERM:
+Broker 3's log shows the handover about half a second (0.55 s, 17:49:48,637 to 17:49:49,188) after broker 2 received SIGTERM:
 
 ```
 [2026-10-15 17:49:48,637] INFO Terminating process due to signal SIGTERM (org.apache.kafka.common.utils.LoggingSignalHandler)     (broker 2)
@@ -49,7 +49,7 @@ Broker 3's log shows the handover about one second after broker 2 received SIGTE
 
 ## Producer behaviour
 
-The producer's own log shows one broker disconnect, from broker 2 when it stopped: `localhost:9192/2: Disconnected: connection closed by peer`. It reconnected and carried on. It finished with:
+The producer's own log shows one broker disconnect, from broker 2 when it stopped: `localhost:9192/2: Disconnected: connection closed by peer`. The evidence does not show a reconnect, but the producer finished with:
 
 ```
 INFO __main__: produced=60000 failed=0
@@ -95,7 +95,7 @@ Yes, but note what this run does and does not show.
 
 The bucket ended at 27 objects (9 per partition: three segments, each with `.log`, `.indexes` and `.rsm-manifest`), 5.9 MiB. No other broker logged a `Copying`/`Copied` line for `events-0` at any point.
 
-A caveat on timing: the uploaded segments of the second round are smaller than the 1 MiB `segment.bytes` (534 KiB for base offset 13231, 453 KiB for base offset 20118), so they were not rolled by size. The base-offset-13231 segment of partition 0 was copied at 17:51:24, before the follow-up batch started at 17:51:28Z, and the next one (base offset 20118, which holds the follow-up batch's records) at 17:52:04. All three partitions uploaded their second and third segments within seconds of each other (17:51:24 to 17:51:26, then 17:52:04 to 17:52:06 in the `ls-minio` timestamps). Inference: some time-based roll closes these segments about 40 s apart; the cause was not found and the roll events themselves are not in the evidence file. Consequently the 13231 segment was not triggered by the follow-up batch, only the 20118 one (and 19963 / 19919 on partitions 1 and 2) was.
+A caveat on timing: the uploaded segments of the second round are smaller than the 1 MiB `segment.bytes` (534 KiB for base offset 13231, 453 KiB for base offset 20118), so they were not rolled by size. The base-offset-13231 segment of partition 0 was copied at 17:51:24, before the follow-up batch started at 17:51:28Z, and the next one (base offset 20118, which holds the follow-up batch's records) at 17:52:04. All three partitions uploaded their second and third segments within seconds of each other (17:51:24 to 17:51:25 in the `ls-minio` timestamps; the 17:51:26 is the `Copied` line of broker 3 for `events-1` in the broker log; then 17:52:04 to 17:52:06 in the `ls-minio` timestamps). The roll events themselves are not in this evidence file. A later, separate check on a fresh stack (`docs/findings/evidence/stage1-segment-roll.txt`, discussed in `01-stage1-offload.md`) found that an idle active segment is closed on every replica about `local.retention.ms` (30 s here) after the last write. That fits the two steps about 40 s apart seen here, each following the end of a producer burst (the first producer finished at 17:50:51, the follow-up batch started at 17:51:28Z); it is an inference for this run, which was not repeated with roll logging. Consequently the 13231 segment was not triggered by the follow-up batch, only the 20118 one (and 19963 / 19919 on partitions 1 and 2) was.
 
 ## What the new leader knew
 
@@ -112,7 +112,7 @@ During that replay broker 3 (the new leader of partition 0) served partition 0's
 [2026-10-15 17:53:47,596] DEBUG Finished reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
 ```
 
-Which segments each of those reads covered is not in the log lines (the plugin's own DEBUG logging is not visible, because its slf4j has no provider here), so any mapping of the three read pairs to the three uploaded segments would be inference from counts. What the evidence supports: broker 3, which became leader after the original leader had gone, performed remote reads for partition 0 during the replay, and the replay returned 80000 records. By configuration, the remote log metadata topic has replication factor 3 (`KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 3` in `compose.yml`), so every broker can see which segments exist; the evidence itself does not show that metadata being read. The limitation above still applies: the segments read had all been uploaded by broker 3 itself, so this run does not show the case of a new leader reading objects that the previous leader wrote.
+Which segments each of those reads covered is not in the log lines (the plugin's own DEBUG logging is not visible, because its slf4j has no provider here; see the SLF4J "No providers found" lines in `docs/findings/evidence/stage1-replay-window.txt`), so any mapping of the three read pairs to the three uploaded segments would be inference from counts. What the evidence supports: broker 3, which became leader after the original leader had gone, performed remote reads for partition 0 during the replay, and the replay returned 80000 records. By configuration, the remote log metadata topic has replication factor 3 (`KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 3` in `compose.yml`), so every broker can see which segments exist; the evidence itself does not show that metadata being read. The limitation above still applies: the segments read had all been uploaded by broker 3 itself, so this run does not show the case of a new leader reading objects that the previous leader wrote.
 
 ## Limits of this experiment
 
