@@ -1,0 +1,42 @@
+# .log files per partition per broker after local deletion
+== kafka-1
+/var/lib/kafka/data/events-0: 1 .log file(s)
+/var/lib/kafka/data/events-1: 1 .log file(s)
+/var/lib/kafka/data/events-2: 1 .log file(s)
+== kafka-2
+/var/lib/kafka/data/events-0: 1 .log file(s)
+/var/lib/kafka/data/events-1: 1 .log file(s)
+/var/lib/kafka/data/events-2: 1 .log file(s)
+== kafka-3
+/var/lib/kafka/data/events-0: 1 .log file(s)
+/var/lib/kafka/data/events-1: 1 .log file(s)
+/var/lib/kafka/data/events-2: 1 .log file(s)
+
+# Remote index cache on each broker (populated by the replay, mtime = replay time)
+== kafka-1
+total 16
+-rw-r--r-- 1 24 17:35:34 0_sNM_6UCyScGkk2wbkdxovg.index
+-rw-r--r-- 1 36 17:35:34 0_sNM_6UCyScGkk2wbkdxovg.timeindex
+-rw-r--r-- 1  0 17:35:34 0_sNM_6UCyScGkk2wbkdxovg.txnindex
+-rw-r--r-- 1 32 17:35:34 14176_oeiiPK_OT76JO1AOF4lMXQ.index
+-rw-r--r-- 1 48 17:35:34 14176_oeiiPK_OT76JO1AOF4lMXQ.timeindex
+-rw-r--r-- 1  0 17:35:34 14176_oeiiPK_OT76JO1AOF4lMXQ.txnindex
+== kafka-2
+total 16
+-rw-r--r-- 1 40 17:35:34 0_YKZzZeTCRsGukhOLHIMlxA.index
+-rw-r--r-- 1 60 17:35:34 0_YKZzZeTCRsGukhOLHIMlxA.timeindex
+-rw-r--r-- 1  0 17:35:34 0_YKZzZeTCRsGukhOLHIMlxA.txnindex
+-rw-r--r-- 1 32 17:35:34 14140_Q2CCd8CpSbirchrANemapw.index
+-rw-r--r-- 1 48 17:35:34 14140_Q2CCd8CpSbirchrANemapw.timeindex
+-rw-r--r-- 1  0 17:35:34 14140_Q2CCd8CpSbirchrANemapw.txnindex
+== kafka-3
+total 16
+-rw-r--r-- 1 136 17:35:34 0_HXTsNw3HQHWb84Iu9v7l9g.index
+-rw-r--r-- 1 204 17:35:34 0_HXTsNw3HQHWb84Iu9v7l9g.timeindex
+-rw-r--r-- 1   0 17:35:34 0_HXTsNw3HQHWb84Iu9v7l9g.txnindex
+-rw-r--r-- 1  32 17:35:34 13823__HS8qLs1SiyhP7XZYPKX9Q.index
+-rw-r--r-- 1  48 17:35:34 13823__HS8qLs1SiyhP7XZYPKX9Q.timeindex
+-rw-r--r-- 1   0 17:35:34 13823__HS8qLs1SiyhP7XZYPKX9Q.txnindex
+
+# Replay summary (second replay)
+{"consumed": 60000, "partitions": {"0": {"consumed": 20118, "first_offset": 0, "last_offset": 20117, "high_watermark": 20118}, "1": {"consumed": 19963, "first_offset": 0, "last_offset": 19962, "high_watermark": 19963}, "2": {"consumed": 19919, "first_offset": 0, "last_offset": 19918, "high_watermark": 19919}}, "seconds": 0.42}

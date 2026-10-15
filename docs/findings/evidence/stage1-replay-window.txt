@@ -1,0 +1,20 @@
+# Broker log lines emitted while 'make replay' ran (docker compose logs --since 2026-10-15T17:36:17Z, replay finished within ~1 s)
+== kafka-1: 0 lines other than local file-deletion housekeeping
+== kafka-2: 0 lines other than local file-deletion housekeeping
+== kafka-3: 0 lines other than local file-deletion housekeeping
+
+# The first replay (inside tests/smoke/03-offload.sh) ran at 17:35:34 UTC; broker lines from 17:35:33 to 17:35:59 (non-housekeeping):
+== kafka-1
+== kafka-2
+== kafka-3
+
+# Plugin logging status (SLF4J lines from kafka-1 startup)
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+SLF4J(W): Class path contains SLF4J bindings targeting slf4j-api versions 1.7.x or earlier.
+SLF4J(W): Ignoring binding found at [jar:file:/opt/kafka/libs/log4j-slf4j-impl-2.24.3.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J(W): See https://www.slf4j.org/codes.html#ignoredBindings for an explanation.
+
+# plugin jars with slf4j/log4j in name:
+slf4j-api-2.0.17.jar
