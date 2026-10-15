@@ -136,6 +136,10 @@ services:
       kafka-1: {condition: service_healthy}
       kafka-2: {condition: service_healthy}
       kafka-3: {condition: service_healthy}
+      # topic-init also pre-creates __consumer_offsets. Without it Karapace's first group-coordinator
+      # lookup is what creates that topic, and its coordinator flaps (node 3 -> node 1) while the 50
+      # partitions elect leaders.
+      topic-init: {condition: service_completed_successfully}
     entrypoint: ["/bin/bash", "/opt/karapace/start.sh", "registry"]
     ports:
       - "${SCHEMA_REGISTRY_PORT:-8081}:8081"
@@ -152,14 +156,27 @@ services:
       KARAPACE_TOPIC_NAME: _schemas
       KARAPACE_LOG_LEVEL: INFO
       KARAPACE_COMPATIBILITY: FULL
+    # Healthy only when Karapace can serve writes. /subjects answers as soon as the HTTP server is up, but
+    # a fresh Karapace is "not master" for 5 s after its election, and POSTs sent in that window are
+    # forwarded to itself and hang. /master_available (GET, but it insists on a JSON body) turns true
+    # once it is the master.
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8081/subjects', timeout=3)"]
+      test:
+        - CMD
+        - python3
+        - -c
+        - |
+          import json, sys, urllib.request as u
+          u.urlopen('http://localhost:8081/subjects', timeout=3)
+          req = u.Request('http://localhost:8081/master_available', data=b'{}', method='GET',
+                          headers={'Content-Type': 'application/json'})
+          sys.exit(0 if json.load(u.urlopen(req, timeout=3)).get('master_available') is True else 1)
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 5s
 
-  # One-shot: creates the `events` topic with tiering enabled, then exits.
+  # One-shot: warms up __consumer_offsets, creates the `events` topic with tiering enabled, then exits.
   # Re-running it is safe (--if-not-exists). Partitions, replication and segment size are overridable.
   topic-init:
     image: apache/kafka:4.0.0
@@ -172,6 +189,18 @@ services:
     command:
       - |
         set -e
+        # The first group-coordinator lookup makes the brokers create __consumer_offsets (50 partitions,
+        # RF 3). Trigger it here and wait for every partition to have a leader and a full ISR, so
+        # Karapace (which starts after this) finds a stable coordinator.
+        /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka-1:19092 --describe --group lab-warmup >/dev/null 2>&1 || true
+        for i in $$(seq 1 60); do
+          out=$$(/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092 --describe --topic __consumer_offsets 2>/dev/null || true)
+          if [ "$$(echo "$$out" | grep -c 'Partition:')" = 50 ] && ! echo "$$out" | grep 'Partition:' | grep -vq 'Leader: [0-9].*Isr: [0-9],[0-9],[0-9]'; then
+            ready=1; break
+          fi
+          sleep 1
+        done
+        [ "$${ready:-0}" = 1 ] || { echo "__consumer_offsets not ready after 60 s" >&2; exit 1; }
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092 --create --if-not-exists \
           --topic events --partitions $${PARTITIONS} --replication-factor $${REPLICATION_FACTOR} \
           --config min.insync.replicas=2 \
