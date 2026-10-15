@@ -1,0 +1,210 @@
+# Stage 1: 3-broker Kafka cluster with tiered storage (Aiven plugin, default segment format) on MinIO.
+# Credentials below are demo-only (MinIO defaults). Do not reuse them anywhere real.
+name: continuo-streaming-lab
+
+x-minio-env: &minio-env
+  MINIO_ROOT_USER: minioadmin
+  MINIO_ROOT_PASSWORD: minioadmin
+
+# Shared by the three brokers; each service sets its own node ID, advertised listeners, port and volume.
+x-kafka: &kafka
+  image: apache/kafka:4.0.0
+  depends_on:
+    minio-init:
+      condition: service_completed_successfully
+
+x-kafka-env: &kafka-env
+  CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
+  KAFKA_PROCESS_ROLES: "broker,controller"
+  KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093"
+  KAFKA_LISTENERS: "CONTROLLER://:9093,PLAINTEXT://:19092,PLAINTEXT_HOST://:9092"
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+  KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+  KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+  KAFKA_LOG_DIRS: /var/lib/kafka/data
+  # Three brokers: internal topics are replicated 3x and need 2 in-sync replicas.
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  KAFKA_MIN_INSYNC_REPLICAS: 2
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+  # Tiered storage: remote log manager and its metadata topic.
+  KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: "true"
+  KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+  KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "PLAINTEXT"
+  KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 3
+  # Offload and local-retention checks run every 5 s so segments move within seconds.
+  KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
+  KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 5000
+  # Aiven plugin (core + s3 jars unpacked by `make plugin`).
+  KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/plugin/core/*:/plugin/s3/*"
+  KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+  KAFKA_RSM_CONFIG_CHUNK_SIZE: 4194304 # 4 MiB
+  KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
+  KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://minio:9000"
+  KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "kafka-tiered"
+  KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "us-east-1"
+  KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: "true"
+  KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: minioadmin
+  KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: minioadmin
+  KAFKA_LOG4J_LOGGERS: "io.aiven.kafka.tieredstorage=DEBUG"
+
+services:
+  minio:
+    image: ghcr.io/carolsimone/continuo-minio:2025.7.23
+    # The image runs as uid 1001, which cannot write to a fresh named volume; run as root (demo only).
+    user: "0:0"
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment: *minio-env
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000" # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # One-shot: creates the buckets, then exits.
+  minio-init:
+    image: ghcr.io/carolsimone/continuo-mc:2025.7.21
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 minioadmin minioadmin
+        mc mb --ignore-existing local/kafka-tiered
+        mc mb --ignore-existing local/warehouse
+
+  kafka-1:
+    <<: *kafka
+    hostname: kafka-1
+    ports:
+      - "${KAFKA_1_PORT:-9092}:9092" # host listener
+    volumes:
+      - ./plugin:/plugin:ro
+      - kafka-1-data:/var/lib/kafka/data
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 1
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-1:19092,PLAINTEXT_HOST://localhost:${KAFKA_1_PORT:-9092}"
+    healthcheck: &kafka-health
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list"]
+      interval: 5s
+      timeout: 20s
+      retries: 24
+      start_period: 10s
+
+  kafka-2:
+    <<: *kafka
+    hostname: kafka-2
+    ports:
+      - "${KAFKA_2_PORT:-9192}:9092"
+    volumes:
+      - ./plugin:/plugin:ro
+      - kafka-2-data:/var/lib/kafka/data
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 2
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-2:19092,PLAINTEXT_HOST://localhost:${KAFKA_2_PORT:-9192}"
+    healthcheck: *kafka-health
+
+  kafka-3:
+    <<: *kafka
+    hostname: kafka-3
+    ports:
+      - "${KAFKA_3_PORT:-9292}:9092"
+    volumes:
+      - ./plugin:/plugin:ro
+      - kafka-3-data:/var/lib/kafka/data
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 3
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-3:19092,PLAINTEXT_HOST://localhost:${KAFKA_3_PORT:-9292}"
+    healthcheck: *kafka-health
+
+  karapace:
+    image: ghcr.io/aiven-open/karapace:4.1.1
+    depends_on:
+      kafka-1: {condition: service_healthy}
+      kafka-2: {condition: service_healthy}
+      kafka-3: {condition: service_healthy}
+    entrypoint: ["/bin/bash", "/opt/karapace/start.sh", "registry"]
+    ports:
+      - "${SCHEMA_REGISTRY_PORT:-8081}:8081"
+    environment:
+      KARAPACE_ADVERTISED_HOSTNAME: karapace
+      KARAPACE_BOOTSTRAP_URI: kafka-1:19092,kafka-2:19092,kafka-3:19092
+      KARAPACE_REPLICATION_FACTOR: 3
+      KARAPACE_HOST: 0.0.0.0
+      KARAPACE_PORT: 8081
+      KARAPACE_CLIENT_ID: karapace-schema-registry-1
+      KARAPACE_GROUP_ID: karapace-schema-registry
+      KARAPACE_MASTER_ELECTION_STRATEGY: highest
+      KARAPACE_MASTER_ELIGIBILITY: "true"
+      KARAPACE_TOPIC_NAME: _schemas
+      KARAPACE_LOG_LEVEL: INFO
+      KARAPACE_COMPATIBILITY: FULL
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8081/subjects', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  # One-shot: creates the `events` topic with tiering enabled, then exits.
+  # Re-running it is safe (--if-not-exists). Partitions, replication and segment size are overridable.
+  topic-init:
+    image: apache/kafka:4.0.0
+    depends_on:
+      kafka-1: {condition: service_healthy}
+      kafka-2: {condition: service_healthy}
+      kafka-3: {condition: service_healthy}
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092 --create --if-not-exists \
+          --topic events --partitions $${PARTITIONS} --replication-factor $${REPLICATION_FACTOR} \
+          --config min.insync.replicas=2 \
+          --config remote.storage.enable=true \
+          --config segment.bytes=$${SEGMENT_BYTES} \
+          --config local.retention.ms=$${LOCAL_RETENTION_MS} \
+          --config retention.ms=-1
+    environment:
+      PARTITIONS: ${PARTITIONS:-3}
+      REPLICATION_FACTOR: ${REPLICATION_FACTOR:-3}
+      SEGMENT_BYTES: ${SEGMENT_BYTES:-1048576} # 1 MiB
+      LOCAL_RETENTION_MS: ${LOCAL_RETENTION_MS:-30000}
+
+  # Not started by `make up`; use `make produce` / `make produce-stop`.
+  producer:
+    profiles: ["producer"]
+    build: ./producer
+    depends_on:
+      karapace:
+        condition: service_healthy
+      topic-init:
+        condition: service_completed_successfully
+    restart: "no"
+    stop_grace_period: 15s
+    environment:
+      BOOTSTRAP_SERVERS: kafka-1:19092,kafka-2:19092,kafka-3:19092
+      SCHEMA_REGISTRY_URL: http://karapace:8081
+      TOPIC: events
+      EVENTS_COUNT: ${EVENTS_COUNT:-0} # 0 = run until stopped
+      EVENTS_RATE: ${EVENTS_RATE:-50} # events per second
+
+volumes:
+  minio-data:
+  kafka-1-data:
+  kafka-2-data:
+  kafka-3-data:
