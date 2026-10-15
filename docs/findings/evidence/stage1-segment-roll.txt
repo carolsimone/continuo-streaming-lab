@@ -1,0 +1,56 @@
+# Segment roll investigation (bounded). Fresh 'make up' stack, same compose.yml. Raw output with blank lines removed; lines starting with '#' are labels.
+# 1. Roll-related settings. Command: kafka-configs.sh --describe --all (topic events and broker 1), filtered with grep -E 'segment|roll|jitter|local.retention|^retention'
+## topic events
+  file.delete.delay.ms=60000 synonyms={DEFAULT_CONFIG:log.segment.delete.delay.ms=60000}
+  local.retention.bytes=-2 synonyms={DEFAULT_CONFIG:log.local.retention.bytes=-2}
+  local.retention.ms=30000 synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=1048576 synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=1048576, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.index.bytes=10485760 synonyms={DEFAULT_CONFIG:log.index.size.max.bytes=10485760}
+  segment.jitter.ms=0 synonyms={}
+  segment.ms=604800000 synonyms={}
+## broker 1 (filter for this section: grep -E '^ *log\.(segment|roll|local\.retention|retention)')
+  log.local.retention.bytes=-2 synonyms={DEFAULT_CONFIG:log.local.retention.bytes=-2}
+  log.local.retention.ms=-2 synonyms={DEFAULT_CONFIG:log.local.retention.ms=-2}
+  log.retention.bytes=-1 synonyms={DEFAULT_CONFIG:log.retention.bytes=-1}
+  log.retention.check.interval.ms=5000 synonyms={STATIC_BROKER_CONFIG:log.retention.check.interval.ms=5000, DEFAULT_CONFIG:log.retention.check.interval.ms=300000}
+  log.retention.hours=168 synonyms={DEFAULT_CONFIG:log.retention.hours=168}
+  log.retention.minutes=null synonyms={}
+  log.retention.ms=null synonyms={}
+  log.roll.hours=168 synonyms={DEFAULT_CONFIG:log.roll.hours=168}
+  log.roll.jitter.hours=0 synonyms={DEFAULT_CONFIG:log.roll.jitter.hours=0}
+  log.roll.jitter.ms=null synonyms={}
+  log.roll.ms=null synonyms={}
+  log.segment.bytes=1073741824 synonyms={DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  log.segment.delete.delay.ms=60000 synonyms={DEFAULT_CONFIG:log.segment.delete.delay.ms=60000}
+# 2. Producer writes 3000 events (make batch N=3000 PACE=100, about 30 s), then stops. Does an idle segment roll, and when?
+## local.retention.ms=30000 (topic default of this lab)
+{"produced": 3000, "failed": 0, "first_seq": 0, "last_seq": 2999}
+last write acknowledged (date -u after make batch returned): 2026-10-15T19:15:04Z
+-- kafka-1
+[2026-10-15 19:15:38,892] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2873 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:15:38,892] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 2849 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:15:38,894] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 2749 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+-- kafka-2
+[2026-10-15 19:15:36,944] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2873 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:15:36,944] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 2849 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:15:36,946] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 2749 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+-- kafka-3
+[2026-10-15 19:15:38,897] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2873 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:15:38,898] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 2849 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:15:38,899] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 2749 in 2 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+# 3. Same, after: kafka-configs.sh --alter --add-config local.retention.ms=10000
+Completed updating config for topic events.
+{"produced": 3000, "failed": 0, "first_seq": 0, "last_seq": 2999}
+last write acknowledged (date -u after make batch returned): 2026-10-15T19:16:52Z
+-- kafka-1
+[2026-10-15 19:17:03,892] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 3893 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:17:03,892] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 3857 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:17:03,893] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 3721 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+-- kafka-2
+[2026-10-15 19:17:06,944] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 3893 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:17:06,944] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 3857 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:17:06,946] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 3721 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+-- kafka-3
+[2026-10-15 19:17:03,897] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 3893 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:17:03,898] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 3857 in 1 ms. (org.apache.kafka.storage.internals.log.LocalLog)
+[2026-10-15 19:17:03,899] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 3721 in 0 ms. (org.apache.kafka.storage.internals.log.LocalLog)
