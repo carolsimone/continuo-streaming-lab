@@ -22,7 +22,7 @@ MC := $(COMPOSE) run --rm --no-deps -T --entrypoint sh minio-init -c
 
 .DEFAULT_GOAL := help
 .PHONY: help plugin up down rebuild clean clean-plugin ps logs produce produce-stop \
-        topic-describe ls-minio ls-local broker-stop broker-start test
+        topic topic-describe ls-minio ls-local broker-stop broker-start test
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -70,6 +70,9 @@ produce: up ## Start the producer in the background (COUNT, RATE)
 
 produce-stop: ## Stop the producer (graceful flush)
 	$(COMPOSE) --profile producer stop producer
+
+topic: ## (Re)create the tiered events topic (PARTITIONS, REPLICATION_FACTOR, SEGMENT_BYTES, SEGMENT_MS, LOCAL_RETENTION_MS)
+	scripts/create-topic.sh
 
 topic-describe: ## Leader, replicas and in-sync replicas per partition
 	$(COMPOSE) exec kafka-1 $(KAFKA_TOPICS) --describe --topic events
