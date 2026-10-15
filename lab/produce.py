@@ -20,6 +20,9 @@ from lab.events import SCHEMA_VERSIONS, load_schema, make_event_for
 
 log = logging.getLogger(__name__)
 
+FLUSH_TIMEOUT_S = 60  # normal finite run: wait for every message
+STOP_FLUSH_TIMEOUT_S = 10  # after SIGTERM: must finish inside compose.yml stop_grace_period (15s)
+
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
@@ -47,14 +50,27 @@ def build_producer(bootstrap: str, registry_url: str, schema_str: str) -> Serial
     )
 
 
-def send(producer: SerializingProducer, topic: str, event: dict, on_delivery) -> None:
+def send(
+    producer: SerializingProducer,
+    topic: str,
+    event: dict,
+    on_delivery,
+    stop: threading.Event | None = None,
+) -> bool:
+    """Enqueue one event, retrying while the local queue is full.
+
+    Returns True once enqueued. If `stop` is set while waiting for queue space, gives up and
+    returns False (the event was not enqueued).
+    """
     while True:
         try:
             producer.produce(topic=topic, key=event["order_id"], value=event, on_delivery=on_delivery)
             producer.poll(0)
-            return
+            return True
         except BufferError:
             producer.poll(0.5)
+            if stop is not None and stop.is_set():
+                return False
 
 
 def run(args: argparse.Namespace, stop: threading.Event) -> dict:
@@ -80,14 +96,17 @@ def run(args: argparse.Namespace, stop: threading.Event) -> dict:
             log.info("stop requested after %d events", sent)
             break
         event = make_event_for(args.schema_version, seq, rng, int(time.time() * 1000))
-        send(producer, args.topic, event, on_delivery)
+        if not send(producer, args.topic, event, on_delivery, stop):
+            log.warning("stop requested while the producer queue was full; event %d not sent", seq)
+            break
         sent += 1
         if interval:
             stop.wait(interval)  # interruptible sleep: a stop request is honoured immediately
-    remaining = producer.flush(60)
+    flush_timeout = STOP_FLUSH_TIMEOUT_S if stop.is_set() else FLUSH_TIMEOUT_S
+    remaining = producer.flush(flush_timeout)
     if remaining:
         counts["failed"] += remaining
-        log.error("%d messages were not delivered before the flush timeout", remaining)
+        log.error("%d messages were not delivered within the %ds flush timeout", remaining, flush_timeout)
     return {**counts, "first_seq": first, "last_seq": first + sent - 1}
 
 

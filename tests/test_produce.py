@@ -98,3 +98,105 @@ def test_finite_count_stops_at_count(monkeypatch):
     summary = produce.run(parse_args(["--count", "4"]), threading.Event())
 
     assert summary == {"produced": 4, "failed": 0, "first_seq": 0, "last_seq": 3}
+
+
+class FullQueueProducer(FakeProducer):
+    """Local queue is full (brokers down): produce always raises BufferError."""
+
+    def __init__(self, stop, stop_after_polls):
+        super().__init__()
+        self.polls = 0
+        self.flush_timeouts = []
+        self._stop_event = stop
+        self._stop_after_polls = stop_after_polls
+
+    def produce(self, topic, key, value, on_delivery):
+        raise BufferError("Local: Queue full")
+
+    def poll(self, timeout):
+        self.polls += 1
+        if self.polls == self._stop_after_polls:
+            self._stop_event.set()  # stands in for a SIGTERM arriving mid-retry
+
+    def flush(self, timeout):
+        self.flush_timeouts.append(timeout)
+        return 0
+
+
+def test_send_returns_when_stop_is_set_while_queue_is_full():
+    stop = threading.Event()
+    fake = FullQueueProducer(stop, stop_after_polls=3)
+
+    result = produce.send(fake, "events", {"order_id": "o-1"}, lambda err, msg: None, stop)
+
+    assert result is False
+    assert fake.polls == 3  # gave up right after the stop request instead of spinning forever
+
+
+def test_send_without_stop_keeps_old_signature_and_returns_true():
+    fake = FakeProducer()
+    assert produce.send(fake, "events", {"order_id": "o-1"}, lambda err, msg: None) is True
+
+
+def test_run_with_full_queue_stops_cleanly_and_does_not_count_unsent_event(monkeypatch):
+    stop = threading.Event()
+    fake = FullQueueProducer(stop, stop_after_polls=2)
+    monkeypatch.setattr(produce, "build_producer", lambda *a, **k: fake)
+
+    summary = produce.run(parse_args(["--count", "0", "--start-seq", "10"]), stop)
+
+    assert summary == {"produced": 0, "failed": 0, "first_seq": 10, "last_seq": 9}
+    assert fake.flush_timeouts == [produce.STOP_FLUSH_TIMEOUT_S]
+
+
+class UndeliverableProducer(FakeProducer):
+    """Accepts messages but never delivers them; flush reports them as remaining."""
+
+    def __init__(self):
+        super().__init__()
+        self.flush_timeouts = []
+
+    def poll(self, timeout):
+        pass
+
+    def flush(self, timeout):
+        self.flush_timeouts.append(timeout)
+        return len(self.sent)
+
+
+def test_stop_path_flush_timeout_is_under_compose_grace_period(monkeypatch):
+    stop = threading.Event()
+    fake = UndeliverableProducer()
+    fake._stop = stop
+    fake._stop_after = 4
+    monkeypatch.setattr(produce, "build_producer", lambda *a, **k: fake)
+
+    summary = produce.run(parse_args(["--count", "0"]), stop)
+
+    assert fake.flush_timeouts == [produce.STOP_FLUSH_TIMEOUT_S]
+    assert produce.STOP_FLUSH_TIMEOUT_S <= 10  # compose.yml stop_grace_period is 15s
+    assert summary == {"produced": 0, "failed": 4, "first_seq": 0, "last_seq": 3}
+
+
+def test_finite_run_keeps_long_flush_timeout(monkeypatch):
+    fake = UndeliverableProducer()
+    monkeypatch.setattr(produce, "build_producer", lambda *a, **k: fake)
+
+    produce.run(parse_args(["--count", "2"]), threading.Event())
+
+    assert fake.flush_timeouts == [produce.FLUSH_TIMEOUT_S]
+
+
+def test_main_exits_1_but_still_prints_json_when_stop_flush_times_out(monkeypatch, capsys):
+    stop = threading.Event()
+    fake = UndeliverableProducer()
+    fake._stop = stop
+    fake._stop_after = 2
+    monkeypatch.setattr(produce, "build_producer", lambda *a, **k: fake)
+    monkeypatch.setattr(produce, "_new_stop_event", lambda: stop)
+
+    assert main(["--count", "0"]) == 1
+
+    out = capsys.readouterr().out.strip().splitlines()
+    assert len(out) == 1
+    assert json.loads(out[0]) == {"produced": 0, "failed": 2, "first_seq": 0, "last_seq": 1}
