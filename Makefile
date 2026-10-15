@@ -1,3 +1,8 @@
+# STAGE=iceberg switches every compose call to include the Iceberg override.
+ifeq ($(STAGE),iceberg)
+export COMPOSE_FILE := compose.yml:compose.iceberg.yml
+endif
+
 PLUGIN_VERSION := 1.1.1
 PLUGIN_URL     := https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/releases/download/v$(PLUGIN_VERSION)
 CORE_SHA256    := 053480aa4ea5d3b667df824b4c4425f469243df3c89fa8c50edbf9ec88300e4f
@@ -17,7 +22,7 @@ MC := $(COMPOSE) run --rm --no-deps -T --entrypoint sh minio-init -c
 
 .DEFAULT_GOAL := help
 .PHONY: help plugin up down rebuild clean clean-plugin ps logs produce produce-stop \
-        topic-describe ls-minio ls-local broker-stop broker-start
+        topic-describe ls-minio ls-local broker-stop broker-start test
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -85,3 +90,6 @@ broker-stop: ## Stop one broker: make broker-stop BROKER=2
 broker-start: ## Start a stopped broker: make broker-start BROKER=2
 	@test -n "$(BROKER)" || { echo "usage: make broker-start BROKER=1|2|3" >&2; exit 2; }
 	$(COMPOSE) start kafka-$(BROKER)
+
+test: ## Run Python unit tests
+	uv run pytest -q
