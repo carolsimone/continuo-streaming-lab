@@ -25,7 +25,12 @@ consumed="$(echo "${summary}" | jget consumed)"
 echo "${summary}" | python3 -c '
 import json, sys
 s = json.load(sys.stdin)
-bad = {p: v["first_offset"] for p, v in s["partitions"].items() if v["first_offset"] != 0}
-sys.exit(f"partitions not starting at offset 0: {bad}" if bad else 0)
-' || fail "replay did not start at offset 0 in every partition"
+parts = s["partitions"]
+bad = {p: v["first_offset"] for p, v in parts.items() if v["first_offset"] != 0}
+if bad:
+    sys.exit(f"partitions not starting at offset 0: {bad}")
+short = {p: v for p, v in parts.items() if v["consumed"] != v["high_watermark"] or v["last_offset"] != v["high_watermark"] - 1}
+if short:
+    sys.exit(f"partitions not fully replayed (consumed != high_watermark or last_offset != high_watermark - 1): {short}")
+' || fail "replay incomplete: see message above"
 log "PASS: ${consumed} records replayed from offset 0 across 3 partitions, old segments served from MinIO"

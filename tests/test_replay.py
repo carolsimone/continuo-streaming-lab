@@ -1,4 +1,6 @@
-from lab.replay import parse_args, summarize
+import pytest
+
+from lab.replay import accept, done, parse_args, partition_ids, summarize
 
 
 def test_summarize_full_range_per_partition():
@@ -29,3 +31,39 @@ def test_parse_args_defaults_follow_env(monkeypatch):
     args = parse_args([])
     assert args.registry == "http://localhost:18081"
     assert args.bootstrap.startswith("localhost:19092,")
+
+
+def test_done_when_every_partition_has_its_range():
+    assert done({0: [0, 1, 2], 1: [0, 1]}, {0: 0, 1: 0}, {0: 3, 1: 2})
+
+
+def test_not_done_while_a_partition_is_short():
+    assert not done({0: [0, 1, 2], 1: [0]}, {0: 0, 1: 0}, {0: 3, 1: 2})
+
+
+def test_done_with_empty_partition():
+    assert done({0: []}, {0: 0}, {0: 0})
+
+
+def test_done_with_log_start_offset_above_zero():
+    # retention moved the log start to 5: only offsets 5..7 exist, so 3 records complete the partition
+    assert done({0: [5, 6, 7]}, {0: 5}, {0: 8})
+    assert not done({0: [5, 6]}, {0: 5}, {0: 8})
+
+
+def test_accept_ignores_offsets_beyond_start_time_watermark_and_duplicates():
+    seen = [0, 1, 2]
+    assert accept(seen, 2, high=5) is False  # duplicate
+    assert accept(seen, 5, high=5) is False  # arrived after the replay started
+    assert accept(seen, 7, high=5) is False
+    assert accept(seen, 3, high=5) is True
+    assert accept([], 5, high=8) is True  # first record after a log start of 5
+
+
+def test_partition_ids_sorted():
+    assert partition_ids({"events": {2: None, 0: None, 1: None}}, "events") == [0, 1, 2]
+
+
+def test_partition_ids_missing_topic_has_explicit_message():
+    with pytest.raises(LookupError, match="topic 'events' not found"):
+        partition_ids({}, "events")

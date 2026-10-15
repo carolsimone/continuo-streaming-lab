@@ -48,7 +48,7 @@ x-kafka-env: &kafka-env
   KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: "true"
   KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: minioadmin
   KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: minioadmin
-  KAFKA_LOG4J_LOGGERS: "io.aiven.kafka.tieredstorage=DEBUG"
+  KAFKA_LOG4J_LOGGERS: "io.aiven.kafka.tieredstorage=DEBUG,kafka.log.remote=DEBUG,org.apache.kafka.server.log.remote=DEBUG"
 
 services:
   minio:

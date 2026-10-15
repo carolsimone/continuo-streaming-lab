@@ -1,0 +1,10 @@
+# Upload lines, all brokers: docker compose logs --no-log-prefix kafka-N | grep -E 'RLMCopyTask\)$' | grep -E ' Copied ' (raw)
+== kafka-1
+[2026-10-15 17:43:22,686] INFO [RemoteLogManager=1 partition=JPJMm7XzScWTiF45EfLS6g:events-2] Copied 00000000000000000000.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=JPJMm7XzScWTiF45EfLS6g:events-2, id=uPNwK786S9qqvh_FL0Lsng} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:43:52,783] INFO [RemoteLogManager=1 partition=JPJMm7XzScWTiF45EfLS6g:events-2] Copied 00000000000000014549.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=JPJMm7XzScWTiF45EfLS6g:events-2, id=HI4OnvyQRlK9eaB8fQoFHQ} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+== kafka-2
+[2026-10-15 17:43:22,691] INFO [RemoteLogManager=2 partition=JPJMm7XzScWTiF45EfLS6g:events-0] Copied 00000000000000000000.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=JPJMm7XzScWTiF45EfLS6g:events-0, id=4nsFJpe5STmh5PGM_Hwllw} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:43:52,741] INFO [RemoteLogManager=2 partition=JPJMm7XzScWTiF45EfLS6g:events-0] Copied 00000000000000010000.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=JPJMm7XzScWTiF45EfLS6g:events-0, id=w-9lO0pbRpesReScP-mwdg} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+== kafka-3
+[2026-10-15 17:43:22,685] INFO [RemoteLogManager=3 partition=JPJMm7XzScWTiF45EfLS6g:events-1] Copied 00000000000000000000.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=JPJMm7XzScWTiF45EfLS6g:events-1, id=gxzsnnpSQDy8MGr9LQpHsQ} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
+[2026-10-15 17:43:52,833] INFO [RemoteLogManager=3 partition=JPJMm7XzScWTiF45EfLS6g:events-1] Copied 00000000000000014688.log to remote storage with segment-id: RemoteLogSegmentId{topicIdPartition=JPJMm7XzScWTiF45EfLS6g:events-1, id=4_hOVokWSLWhaxjWQcjOcA} (kafka.log.remote.RemoteLogManager$RLMCopyTask)
