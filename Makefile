@@ -21,7 +21,7 @@ KAFKA_TOPICS := /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092
 MC := $(COMPOSE) run --rm --no-deps -T --entrypoint sh minio-init -c
 
 .DEFAULT_GOAL := help
-.PHONY: help plugin up down rebuild clean clean-plugin ps logs produce produce-stop \
+.PHONY: help plugin up down rebuild clean clean-plugin ps logs produce produce-stop batch \
         topic topic-describe ls-minio ls-local broker-stop broker-start test
 
 help: ## List targets
@@ -70,6 +70,10 @@ produce: up ## Start the producer in the background (COUNT, RATE)
 
 produce-stop: ## Stop the producer (graceful flush)
 	$(COMPOSE) --profile producer stop producer
+
+batch: ## Produce a finite batch from the host (N=20000, PACE=0, SCHEMA=v1, START=0)
+	uv run python -m lab.produce --count $(or $(N),20000) --rate $(or $(PACE),0) \
+	  --schema-version $(or $(SCHEMA),v1) --start-seq $(or $(START),0)
 
 topic: ## (Re)create the tiered events topic (PARTITIONS, REPLICATION_FACTOR, SEGMENT_BYTES, SEGMENT_MS, LOCAL_RETENTION_MS)
 	scripts/create-topic.sh

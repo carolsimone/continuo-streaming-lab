@@ -188,7 +188,9 @@ services:
   # Not started by `make up`; use `make produce` / `make produce-stop`.
   producer:
     profiles: ["producer"]
-    build: ./producer
+    build:
+      context: . # repo root: the image contains the `lab` package and its Avro schemas
+      dockerfile: producer/Dockerfile
     depends_on:
       karapace:
         condition: service_healthy
@@ -196,12 +198,18 @@ services:
         condition: service_completed_successfully
     restart: "no"
     stop_grace_period: 15s
-    environment:
-      BOOTSTRAP_SERVERS: kafka-1:19092,kafka-2:19092,kafka-3:19092
-      SCHEMA_REGISTRY_URL: http://karapace:8081
-      TOPIC: events
-      EVENTS_COUNT: ${EVENTS_COUNT:-0} # 0 = run until stopped
-      EVENTS_RATE: ${EVENTS_RATE:-50} # events per second
+    # Runs `python -m lab.produce`. Inside Compose it uses the in-network addresses, not the host ports.
+    command:
+      - --count
+      - "${EVENTS_COUNT:-0}" # 0 = run until stopped (SIGTERM flushes and prints the summary)
+      - --rate
+      - "${EVENTS_RATE:-50}" # events per second
+      - --topic
+      - events
+      - --bootstrap
+      - kafka-1:19092,kafka-2:19092,kafka-3:19092
+      - --registry
+      - http://karapace:8081
 
 volumes:
   minio-data:
