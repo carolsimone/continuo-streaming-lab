@@ -1,6 +1,6 @@
 # Experiment 4: losing the leader of a tiered partition
 
-All numbers and log lines below come from `docs/findings/evidence/failover.txt`. Nothing here is estimated.
+Numbers and log lines below are copied from `docs/findings/evidence/failover.txt`. Statements about configuration cite `compose.yml` and say so. Anything that is neither in the evidence file nor in `compose.yml` is labelled as inference.
 
 ## What was run
 
@@ -55,7 +55,7 @@ The producer's own log shows one broker disconnect, from broker 2 when it stoppe
 INFO __main__: produced=60000 failed=0
 ```
 
-So all 60000 events were acknowledged and none was reported as failed. (The other `FAIL ... Connection refused` lines in the evidence are the client trying `::1` before `127.0.0.1` on `localhost` while connecting; they are not related to the failover.) Because `min.insync.replicas=2` and two replicas stayed alive, writes remained possible throughout.
+So all 60000 events were acknowledged and none was reported as failed. (The other `FAIL ... Connection refused` lines in the evidence are against `[::1]` addresses on `localhost` ports; inference: the client tries the IPv6 address first and then falls back to IPv4, so they are unrelated to the failover. The evidence does not show the fallback itself.) Because `min.insync.replicas=2` and two replicas stayed alive, writes remained possible throughout.
 
 ## Replay result
 
@@ -64,14 +64,16 @@ So all 60000 events were acknowledged and none was reported as failed. (The othe
 [lab] PASS: every acknowledged event was replayed exactly once after losing the leader of partition 0
 ```
 
-The check compares the producer's acknowledged count with the number of records `make replay` read from offset 0, and it passed: no loss. A duplicate written by a producer retry would occupy its own offset and push the replayed count above the acknowledged count, so equality means no duplicates were written either.
+The `PASS` wording above is what the script printed in this run. Its claim of "exactly once" was stronger than the check supports, so the script's message was afterwards reworded to say that only counts were compared (the experiment was not re-run).
+
+The check compares only two counts: the producer's acknowledged count and the number of records `make replay` read from offset 0. They are equal. Equal counts are consistent with no loss and no duplicates, but they do not prove it: one lost record plus one duplicate would cancel out, and the check does not compare individual records (for example by sequence number). Offsets 0 to the high watermark were read contiguously for each partition (`first_offset` 0, `consumed` equal to `high_watermark`), which makes a gap in the offset range unlikely but says nothing about record content.
 
 ## Did offload resume under the new leader
 
 Yes, but note what this run does and does not show.
 
-- At the moment broker 2 was stopped, partition 0 held only about 15 s of data, well under one 1 MiB segment. Broker 2 never logged a `Copying` or `Copied` line in this run. Every segment of partition 0 in the bucket was therefore uploaded by broker 3, the new leader. This run does **not** test whether a new leader keeps serving segments the old leader had already uploaded; it tests that the new leader takes over uploading.
-- Segment 0 of partition 0 was copied by broker 3 about four seconds after partition 1's first segment was copied by its leader (broker 3 as well), consistent with the 5 s `remote.log.manager.task.interval.ms` between copy-task runs:
+- Broker 2 (stopped at 17:49:48) never logged a `Copying` or `Copied` line in this run (the `kafka-2` section of the evidence is empty), and the first `Copying` line for `events-0` is broker 3's at 17:50:29. Every segment of partition 0 in the bucket was therefore uploaded by broker 3, the new leader. Inference: the stop came about 15 s into the production, when partition 0 held well under one 1 MiB segment, so there was nothing rolled to upload yet. This run does **not** test whether a new leader keeps serving segments the old leader had already uploaded; it tests that the new leader takes over uploading.
+- Segment 0 of partition 0 was copied by broker 3 about four seconds after partition 1's first segment was copied by its leader (broker 3 as well), which is plausibly the copy task running every 5 s (`KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000` in `compose.yml`; the interval itself is not visible in the evidence):
 
 ```
 [2026-10-15 17:50:29,192] INFO [RemoteLogManager=3 partition=AvbO9pSzQXGn4d7umOyqjg:events-0] Copying 00000000000000000000.log to remote storage. (kafka.log.remote.RemoteLogManager$RLMCopyTask)
@@ -93,13 +95,13 @@ Yes, but note what this run does and does not show.
 
 The bucket ended at 27 objects (9 per partition: three segments, each with `.log`, `.indexes` and `.rsm-manifest`), 5.9 MiB. No other broker logged a `Copying`/`Copied` line for `events-0` at any point.
 
-A caveat on timing: the segments in this lab are rolled by a timer as well as by size (the broker log shows all three partitions rolling at the same instant, `17:51:23` and again `17:52:03`, 40 s apart), so the base-offset-13231 segment of partition 0 was copied at 17:51:24, a few seconds before the follow-up batch started, and the segment that holds the follow-up batch's records was copied once it rolled at 17:52:03. I did not find out which setting causes the 40 s roll; I only observed it in the broker logs.
+A caveat on timing: the uploaded segments of the second round are smaller than the 1 MiB `segment.bytes` (534 KiB for base offset 13231, 453 KiB for base offset 20118), so they were not rolled by size. The base-offset-13231 segment of partition 0 was copied at 17:51:24, before the follow-up batch started at 17:51:28Z, and the next one (base offset 20118, which holds the follow-up batch's records) at 17:52:04. All three partitions uploaded their second and third segments within seconds of each other (17:51:24 to 17:51:26, then 17:52:04 to 17:52:06 in the `ls-minio` timestamps). Inference: some time-based roll closes these segments about 40 s apart; the cause was not found and the roll events themselves are not in the evidence file. Consequently the 13231 segment was not triggered by the follow-up batch, only the 20118 one (and 19963 / 19919 on partitions 1 and 2) was.
 
 ## What the new leader knew
 
 After the follow-up batch I ran `make replay` again: `consumed=80000` (partition 0: 26701, partition 1: 26747, partition 2: 26552, each from `first_offset` 0 to the high watermark), equal to 60000 + 20000 events produced.
 
-During that replay broker 3 (the new leader of partition 0) served partition 0's history from the bucket. Its `RemoteLogReader` logged three read pairs for `events-0`, one for each of the three uploaded segments, and neither broker 1 nor broker 2 logged any for `events-0`:
+During that replay broker 3 (the new leader of partition 0) served partition 0's history from the bucket. Its `RemoteLogReader` logged three read pairs for `events-0` (the mapping of reads to segments is not observable in the logs), and neither broker 1 nor broker 2 logged any for `events-0`:
 
 ```
 [2026-10-15 17:53:47,541] DEBUG Reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
@@ -110,10 +112,10 @@ During that replay broker 3 (the new leader of partition 0) served partition 0's
 [2026-10-15 17:53:47,596] DEBUG Finished reading records from remote storage for topic partition events-0 (kafka.log.remote.RemoteLogReader)
 ```
 
-Which segments each of those reads covered is not in the log lines (the plugin's own DEBUG logging is not visible, because its slf4j has no provider here), so the statement "three reads for three segments" is an inference from counts, not something the log states. What the evidence supports without inference: a broker that became leader after the original leader had gone could read the tiered history of partition 0 through the shared remote log metadata (the `__remote_log_metadata` topic is replicated on all three brokers) and return all of it, so the replay was complete. The limitation above still applies: the segments read had all been uploaded by broker 3 itself, so this run does not show the case of a new leader reading objects that the previous leader wrote.
+Which segments each of those reads covered is not in the log lines (the plugin's own DEBUG logging is not visible, because its slf4j has no provider here), so any mapping of the three read pairs to the three uploaded segments would be inference from counts. What the evidence supports: broker 3, which became leader after the original leader had gone, performed remote reads for partition 0 during the replay, and the replay returned 80000 records. By configuration, the remote log metadata topic has replication factor 3 (`KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 3` in `compose.yml`), so every broker can see which segments exist; the evidence itself does not show that metadata being read. The limitation above still applies: the segments read had all been uploaded by broker 3 itself, so this run does not show the case of a new leader reading objects that the previous leader wrote.
 
 ## Limits of this experiment
 
-- One run, one stop of one broker, a graceful stop (`docker compose stop` sends SIGTERM; the log shows a controlled shutdown). A hard kill or a network partition was not tested.
+- One run, one stop of one broker, a stop by `docker compose stop`, which the evidence shows as a SIGTERM to broker 2 (a controlled shutdown is what `docker compose stop` is expected to trigger; it was not captured in the evidence). A hard kill or a network partition was not tested.
 - The old leader had not uploaded anything yet, so the "new leader continues from the old leader's uploads" case was not exercised. Doing that would need the stop to happen after at least one segment of the partition has been copied (for example by stopping later or lowering `segment.bytes`).
-- The producer is not configured as idempotent, so a duplicate-free result is an observation of this run (replayed count equal to acknowledged count), not a guarantee.
+- The producer is not configured as idempotent, so a duplicate-free, loss-free result is at most an observation of this run (replayed count equal to acknowledged count), not a guarantee and not a per-record check.

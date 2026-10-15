@@ -3,7 +3,7 @@
 source "$(dirname "$0")/lib.sh"
 
 produce_out="$(mktemp)"
-trap 'rm -f "${produce_out}"' EXIT
+trap 'rm -f "${produce_out}"; [[ -n "${producer_pid:-}" ]] && kill "${producer_pid}" 2>/dev/null || true' EXIT
 
 make clean
 make up
@@ -12,7 +12,8 @@ make -s batch N=60000 PACE=1000 > "${produce_out}" &
 producer_pid=$!
 sleep 15
 
-leader="$(make -s topic-describe | grep -E 'Partition: 0\s' | sed -E 's/.*Leader: ([0-9]+).*/\1/')"
+leader="$(make -s topic-describe | grep -E 'Partition: 0\s' | sed -E 's/.*Leader: ([0-9]+).*/\1/')" || leader=""
+[[ "${leader}" =~ ^[1-3]$ ]] || fail "could not parse leader of partition 0: '${leader}'"
 # Ask a broker that stays up, in case the stopped one is kafka-1.
 survivor=$(( leader % 3 + 1 ))
 log "before stop:"; make -s topic-describe VIA="${survivor}" >&2
@@ -23,7 +24,7 @@ log "after stop:";    make -s topic-describe VIA="${survivor}" >&2
 
 producer_status=0
 wait "${producer_pid}" || producer_status=$?
-produced="$(tail -1 "${produce_out}" | jget produced)"
+produced="$(tail -1 "${produce_out}" | jget produced)" || produced=unknown
 
 log "restarting broker ${leader}"
 make broker-start BROKER="${leader}"
@@ -37,4 +38,4 @@ summary="$(make -s replay | tail -1)"
 consumed="$(echo "${summary}" | jget consumed)"
 log "produced=${produced} replayed=${consumed}"
 [[ "${produced}" == "${consumed}" ]] || fail "replay returned ${consumed} records, producer got ${produced} acknowledged"
-log "PASS: every acknowledged event was replayed exactly once after losing the leader of partition 0"
+log "PASS: replayed count equals acknowledged count (${produced}) after losing the leader of partition 0; counts only, no per-record comparison"
