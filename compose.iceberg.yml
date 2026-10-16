@@ -1,0 +1,55 @@
+# Stage 2: flip the Aiven plugin to Iceberg mode. Merged over compose.yml (make STAGE=iceberg ...).
+# Mirrors the topology of Aiven's own demo (demo/iceberg in Aiven-Open/tiered-storage-for-apache-kafka).
+# Credentials below are demo-only (MinIO defaults). Do not reuse them anywhere real.
+services:
+  minio:
+    environment:
+      MINIO_DOMAIN: "minio" # enables virtual-host style addressing: warehouse.minio:9000
+    networks:
+      default:
+        aliases:
+          - warehouse.minio
+
+  # Test-grade REST catalog. Keeps its table pointers in its own embedded store; restarting this
+  # container can make it forget tables while the Parquet files stay in MinIO.
+  iceberg-rest:
+    image: apache/iceberg-rest-fixture:1.10.0
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "${ICEBERG_REST_PORT:-8181}:8181"
+    environment:
+      AWS_ACCESS_KEY_ID: "minioadmin"
+      AWS_SECRET_ACCESS_KEY: "minioadmin"
+      AWS_REGION: "us-east-1"
+      CATALOG_WAREHOUSE: "s3://warehouse/"
+      CATALOG_IO__IMPL: "org.apache.iceberg.aws.s3.S3FileIO"
+      CATALOG_S3_ENDPOINT: "http://minio:9000"
+
+  # The same Iceberg settings apply to all three brokers (YAML anchor, merged over compose.yml).
+  kafka-1: &kafka-iceberg
+    depends_on:
+      iceberg-rest:
+        condition: service_started
+    environment: &kafka-iceberg-env
+      KAFKA_RSM_CONFIG_STRUCTURE_PROVIDER_CLASS: "io.aiven.kafka.tieredstorage.iceberg.AvroSchemaRegistryStructureProvider"
+      KAFKA_RSM_CONFIG_STRUCTURE_PROVIDER_SERDE_SCHEMA_REGISTRY_URL: "http://karapace:8081"
+      KAFKA_RSM_CONFIG_SEGMENT_FORMAT: "iceberg"
+      KAFKA_RSM_CONFIG_ICEBERG_NAMESPACE: "default"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_CLASS: "org.apache.iceberg.rest.RESTCatalog"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_URI: "http://iceberg-rest:8181"
+      "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_IO-IMPL": "org.apache.iceberg.aws.s3.S3FileIO"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_WAREHOUSE: "s3://warehouse/"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_ENDPOINT: "http://minio:9000"
+      "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_ACCESS-KEY-ID": "minioadmin"
+      "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_SECRET-ACCESS-KEY": "minioadmin"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_CLIENT_REGION: "us-east-1"
+
+  kafka-2:
+    <<: *kafka-iceberg
+    environment: *kafka-iceberg-env
+
+  kafka-3:
+    <<: *kafka-iceberg
+    environment: *kafka-iceberg-env

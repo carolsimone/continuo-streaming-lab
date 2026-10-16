@@ -13,7 +13,7 @@ COMPOSE := docker compose
 # Port overrides from a gitignored .env (KEY=value lines) reach the host tools too, not just compose.
 # As in compose, a value already set in the shell wins over .env. A variable that neither sets is
 # exported empty, which compose (`${VAR:-default}`) and lab/endpoints.py both treat as unset.
-PORT_VARS := KAFKA_1_PORT KAFKA_2_PORT KAFKA_3_PORT SCHEMA_REGISTRY_PORT MINIO_API_PORT MINIO_CONSOLE_PORT
+PORT_VARS := KAFKA_1_PORT KAFKA_2_PORT KAFKA_3_PORT SCHEMA_REGISTRY_PORT MINIO_API_PORT MINIO_CONSOLE_PORT ICEBERG_REST_PORT
 $(foreach v,$(PORT_VARS),$(if $($(v)),$(eval _shell_$(v) := $($(v)))))
 -include .env
 $(foreach v,$(PORT_VARS),$(if $(_shell_$(v)),$(eval $(v) := $(_shell_$(v)))))
