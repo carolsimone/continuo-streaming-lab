@@ -154,6 +154,6 @@ lists both buckets (`kafka-tiered`, empty in this mode, and `warehouse`). The fi
 - Known alpha limits: duplicate rows are possible in principle (the findings count them for this run) and
   schema evolution is not supported.
 
-Findings, with the evidence they are based on: [docs/findings/02-stage2-iceberg.md](docs/findings/02-stage2-iceberg.md).
+Findings, with the evidence they are based on: [docs/findings/02-stage2-iceberg.md](docs/findings/02-stage2-iceberg.md). Freshness and leader-restart results (including that a replay of tiered history through the broker did not match the table in the paced runs): [docs/findings/03-freshness-and-duplicates.md](docs/findings/03-freshness-and-duplicates.md).
 The scripts that produced the evidence are in `scripts/verify/`; the end-to-end check is
 `tests/smoke/04-iceberg.sh`.

@@ -56,3 +56,64 @@ wait_for_rows() {
     log "table rows: ${rows} of ${expected}"
   done
 }
+
+# ---- helpers shared by stage2-duplicates.sh and stage2-replay-source.sh ----
+OFFSETS="docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events"
+utc_hms() { python3 -c 'import datetime as d; print(d.datetime.now(d.timezone.utc).strftime("%H:%M:%S.%f")[:-3])'; }
+
+# leader_of <partition>: broker id leading the partition, from kafka-topics --describe.
+leader_of() {
+  make -s topic-describe 2>/dev/null | grep -E "Partition: $1[[:space:]]" | sed -E 's/.*Leader: ([0-9]+).*/\1/' | tr -d '\r'
+}
+
+# wait_rows_at_least <rows> <seconds>: poll the table (non-fatal), print the last row count.
+wait_rows_at_least() {
+  local want=$1 deadline=$((SECONDS + $2)) rows=0 out
+  until (( rows >= want )); do
+    (( SECONDS < deadline )) || { log "table holds ${rows} rows after waiting, wanted ${want}"; return 1; }
+    sleep 5
+    out="$(make -s query 2>/dev/null)" && rows="$(jget row_count <<<"${out}")" || rows=0
+  done
+  log "table rows: ${rows} (wanted ${want})"
+}
+
+# end_total: sum of the broker end offsets over the partitions.
+end_total() {
+  ${OFFSETS} --time -1 2>/dev/null | awk -F: '{s += $3} END {print s}'
+}
+
+# pairs_check <label>: the three-way comparison, one JSON line plus a per-partition summary.
+pairs_check() {
+  local out rc=0 err
+  err="$(mktemp)"
+  echo "\$ uv run python -m lab.pairs   # stdout = one JSON line"
+  out="$(uv run python -m lab.pairs 2>"${err}")" || rc=$?
+  grep -E ' (INFO|ERROR) __main__' "${err}" | cut -c1-300 || true
+  rm -f "${err}"
+  echo "${out}"
+  (( rc == 0 )) || echo "(exit code ${rc})"
+  echo
+  PAIRS="${out}" python3 - <<'PY' 2>&1
+import json
+import os
+
+r = json.loads(os.environ["PAIRS"]) if os.environ["PAIRS"] else None
+if r is None:
+    print("no result")
+    raise SystemExit(0)
+for p, v in r["partitions"].items():
+    print(f"partition {p}: broker end offset {v['end_offset']} (log start {v['low']}) | table rows {v['table_rows']}, "
+          f"duplicates {v['table_duplicates']}, missing {v['table_missing']} {v['table_missing_ranges']} | "
+          f"replay rows {v['replay_rows']}, duplicates {v['replay_duplicates']}, missing {v['replay_missing']} "
+          f"{v['replay_missing_ranges']} | in table only {v['table_only']}, in replay only {v['replay_only']}")
+t = r["totals"]
+c = r["content"]["totals"]
+print(f"content: offsets whose record differs between table and replay {c['offsets_with_different_record']}, "
+      f"order_ids repeated in the replay {c['replay_duplicate_order_ids']}, in the table {c['table_duplicate_order_ids']}")
+print(f"replay status: {r['replay_status']}")
+print(f"total: broker records {t['expected']}, table rows {t['table_rows']}, table duplicates {t['table_duplicates']}, "
+      f"table missing {t['table_missing']}, replay rows {t['replay_rows']}, replay duplicates {t['replay_duplicates']}, "
+      f"replay missing {t['replay_missing']}")
+PY
+  echo
+}

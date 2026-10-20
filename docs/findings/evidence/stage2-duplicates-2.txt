@@ -1,0 +1,484 @@
+## settings: trigger=copying kill=1 delay=4 batch=100000 pace=2000 kicker=3000 segment.bytes=262144 (everything else lab default)
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_BYTES=262144 make topic
+Created topic events.
+Topic: events	TopicId: zPHh65mkRMOCXeix2R9GbA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=262144,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+
+## leader of partition 0 before the restart: broker 1
+
+$ make -s batch N=100000 PACE=2000 LAB_KEY_FIELD=customer_id   # in the background, started 14:45:53.587 UTC
+[lab] broker 1 has finished at least one upload of events-0
+## state before the restart: broker 1 has already uploaded at least one segment of events-0, the batch is still running
+
+$ curl -s http://localhost:8181/v1/namespaces/default/tables/events | python3 (one line per snapshot, time in UTC)
+snapshots: 5 | current-snapshot-id: 4254881516771809281
+14:46:02.177 6647300913513393114 append added-records=None added-data-files=None total-records=0
+14:46:02.595 5527758429079090340 append added-records=None added-data-files=None total-records=0
+14:46:03.434 1973601984803317790 append added-records=3459 added-data-files=1 total-records=3459
+14:46:03.585 7295477068757605487 append added-records=3453 added-data-files=1 total-records=6912
+14:46:07.438 4254881516771809281 append added-records=3422 added-data-files=1 total-records=10334
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ p\,\ count\(\*\)\ AS\ files\,\ sum\(n\)\ AS\ rows\,\ min\(lo\)\ AS\ lowest\,\ max\(hi\)\ AS\ highest\,\ sum\(CASE\ WHEN\ n\ =\ hi\ -\ lo\ +\ 1\ THEN\ 0\ ELSE\ 1\ END\)\ AS\ files_with_internal_gaps\ FROM\ f\ GROUP\ BY\ p\ ORDER\ BY\ p make -s query
+2026-10-20 16:46:08,118 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00005-aa10eb59-c9b8-4a29-b14c-c188695ded6a.metadata.json
+{"p": 0, "files": 1, "rows": 3422, "lowest": 0, "highest": 3421, "files_with_internal_gaps": 0}
+{"p": 1, "files": 1, "rows": 3453, "lowest": 0, "highest": 3452, "files_with_internal_gaps": 0}
+{"p": 2, "files": 1, "rows": 3459, "lowest": 0, "highest": 3458, "files_with_internal_gaps": 0}
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ count\(\*\)\ AS\ overlapping_file_pairs_same_partition\ FROM\ f\ a\ JOIN\ f\ b\ ON\ a.p\ =\ b.p\ AND\ a.path\ \<\ b.path\ AND\ a.lo\ \<=\ b.hi\ AND\ b.lo\ \<=\ a.hi make -s query
+2026-10-20 16:46:08,249 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00005-aa10eb59-c9b8-4a29-b14c-c188695ded6a.metadata.json
+{"overlapping_file_pairs_same_partition": 0}
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ count\(\*\)\ AS\ parquet_files_in_bucket_not_in_metadata\ FROM\ f\ WHERE\ path\ NOT\ IN\ \(SELECT\ file_path\ FROM\ iceberg_metadata\(\'s3://warehouse/default/events/metadata/00005-aa10eb59-c9b8-4a29-b14c-c188695ded6a.metadata.json\'\)\) make -s query
+2026-10-20 16:46:08,376 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00005-aa10eb59-c9b8-4a29-b14c-c188695ded6a.metadata.json
+{"parquet_files_in_bucket_not_in_metadata": 0}
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ p\,\ lo\,\ hi\,\ n\ FROM\ f\ ORDER\ BY\ p\,\ lo make -s query
+2026-10-20 16:46:08,514 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00005-aa10eb59-c9b8-4a29-b14c-c188695ded6a.metadata.json
+{"p": 0, "lo": 0, "hi": 3421, "n": 3422}
+{"p": 1, "lo": 0, "hi": 3452, "n": 3453}
+{"p": 2, "lo": 0, "hi": 3458, "n": 3459}
+
+## key mapping before the restart (partial table: only the uploaded segments)
+
+$ SQL=SELECT\ value.customer_id\ AS\ customer_id\,\ count\(DISTINCT\ kafka.partition\)\ AS\ partitions\ FROM\ \{table\}\ GROUP\ BY\ 1\ HAVING\ count\(DISTINCT\ kafka.partition\)\ \>\ 1 make -s query
+2026-10-20 16:46:08,655 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00005-aa10eb59-c9b8-4a29-b14c-c188695ded6a.metadata.json
+
+[lab] waiting for the next 'Copying' line of events-0 on broker 1
+# restart at 14:46:12.551 UTC: SIGKILL, then start
+$ docker compose kill -s KILL kafka-1
+ Container continuo-streaming-lab-kafka-1-1  Killing
+ Container continuo-streaming-lab-kafka-1-1  Killed
+
+$ docker compose start kafka-1
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Started
+
+## producer result of the first batch (the restart happened while it was running)
+
+[lab] the batch exited non-zero
+{"produced": 94962, "failed": 5038, "first_seq": 0, "last_seq": 99999}
+delivery failures logged by the producer: 5038
+
+[lab] ok: full ISR for every partition
+## partition leaders after the restart
+
+$ make topic-describe
+docker compose exec kafka-1 /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092 --describe --topic events
+Topic: events	TopicId: zPHh65mkRMOCXeix2R9GbA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=262144,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 2	Replicas: 1,2,3	Isr: 2,3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 3	Replicas: 3,1,2	Isr: 3,2,1	Elr: 	LastKnownElr: 
+
+# partition 0 leader after the restart: broker 2 (before: broker 1)
+
+## kicker batch: 3000 more events so the newest segments close
+
+$ make -s batch N=3000 START=100000 PACE=2000 LAB_KEY_FIELD=customer_id
+{"produced": 3000, "failed": 0, "first_seq": 100000, "last_seq": 102999}
+delivery failures logged by the producer: 0
+
+## waiting for the table to hold the 97962 records the brokers hold (the open segments upload after the idle roll)
+
+[lab] table rows: 97962 (wanted 97962)
+## state after the restart
+
+$ curl -s http://localhost:8181/v1/namespaces/default/tables/events | python3 (one line per snapshot, time in UTC)
+snapshots: 32 | current-snapshot-id: 7512639575784432257
+14:46:02.177 6647300913513393114 append added-records=None added-data-files=None total-records=0
+14:46:02.595 5527758429079090340 append added-records=None added-data-files=None total-records=0
+14:46:03.434 1973601984803317790 append added-records=3459 added-data-files=1 total-records=3459
+14:46:03.585 7295477068757605487 append added-records=3453 added-data-files=1 total-records=6912
+14:46:07.438 4254881516771809281 append added-records=3422 added-data-files=1 total-records=10334
+14:46:08.928 5443440691497457864 append added-records=3461 added-data-files=1 total-records=13795
+14:46:09.153 741470893943322749 append added-records=3450 added-data-files=1 total-records=17245
+14:46:19.477 5057477619484645255 append added-records=2048 added-data-files=1 total-records=19293
+14:46:23.118 8498928622981890111 append added-records=3419 added-data-files=1 total-records=22712
+14:46:23.415 658178432010467991 append added-records=2684 added-data-files=1 total-records=25396
+14:46:24.757 1422645015679753621 append added-records=3546 added-data-files=1 total-records=28942
+14:46:28.680 4712660569542845748 append added-records=3565 added-data-files=1 total-records=32507
+14:46:28.855 3554518882351121062 append added-records=3452 added-data-files=1 total-records=35959
+14:46:30.037 6873646361318278865 append added-records=3444 added-data-files=1 total-records=39403
+14:46:33.361 6736623418501051269 append added-records=3416 added-data-files=1 total-records=42819
+14:46:34.128 8180101311377343599 append added-records=3454 added-data-files=1 total-records=46273
+14:46:35.308 5053271655363802003 append added-records=3437 added-data-files=1 total-records=49710
+14:46:38.637 4769184851986745286 append added-records=3420 added-data-files=1 total-records=53130
+14:46:44.400 1507573474169375303 append added-records=3452 added-data-files=1 total-records=56582
+14:46:45.525 8255955178641218245 append added-records=3440 added-data-files=1 total-records=60022
+14:46:48.893 2130257023378089067 append added-records=3418 added-data-files=1 total-records=63440
+14:46:49.670 7976563158020256260 append added-records=3450 added-data-files=1 total-records=66890
+14:46:50.802 1608518036740807385 append added-records=3440 added-data-files=1 total-records=70330
+14:46:54.109 7672747475713078623 append added-records=3407 added-data-files=1 total-records=73737
+14:46:54.933 8482322938066279075 append added-records=3454 added-data-files=1 total-records=77191
+14:46:56.079 8657410149262099826 append added-records=3442 added-data-files=1 total-records=80633
+14:47:00.155 1116022113345407796 append added-records=3454 added-data-files=1 total-records=84087
+14:47:04.335 5473747274860390485 append added-records=3414 added-data-files=1 total-records=87501
+14:47:06.361 6187927196086230935 append added-records=3428 added-data-files=1 total-records=90929
+14:47:40.443 7528844537135458047 append added-records=3288 added-data-files=1 total-records=94217
+14:47:41.581 7596449409774544872 append added-records=1481 added-data-files=1 total-records=95698
+14:47:44.567 7512639575784432257 append added-records=2264 added-data-files=1 total-records=97962
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ p\,\ count\(\*\)\ AS\ files\,\ sum\(n\)\ AS\ rows\,\ min\(lo\)\ AS\ lowest\,\ max\(hi\)\ AS\ highest\,\ sum\(CASE\ WHEN\ n\ =\ hi\ -\ lo\ +\ 1\ THEN\ 0\ ELSE\ 1\ END\)\ AS\ files_with_internal_gaps\ FROM\ f\ GROUP\ BY\ p\ ORDER\ BY\ p make -s query
+2026-10-20 16:47:57,974 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+{"p": 0, "files": 8, "rows": 26180, "lowest": 0, "highest": 26179, "files_with_internal_gaps": 0}
+{"p": 1, "files": 11, "rows": 34609, "lowest": 0, "highest": 34608, "files_with_internal_gaps": 0}
+{"p": 2, "files": 11, "rows": 37173, "lowest": 0, "highest": 37172, "files_with_internal_gaps": 0}
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ count\(\*\)\ AS\ overlapping_file_pairs_same_partition\ FROM\ f\ a\ JOIN\ f\ b\ ON\ a.p\ =\ b.p\ AND\ a.path\ \<\ b.path\ AND\ a.lo\ \<=\ b.hi\ AND\ b.lo\ \<=\ a.hi make -s query
+2026-10-20 16:47:58,116 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+{"overlapping_file_pairs_same_partition": 0}
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ count\(\*\)\ AS\ parquet_files_in_bucket_not_in_metadata\ FROM\ f\ WHERE\ path\ NOT\ IN\ \(SELECT\ file_path\ FROM\ iceberg_metadata\(\'s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json\'\)\) make -s query
+2026-10-20 16:47:58,261 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+{"parquet_files_in_bucket_not_in_metadata": 0}
+
+$ SQL=WITH\ f\ AS\ \(SELECT\ regexp_extract\(filename\,\ \'\[\^/\]\*\$\'\)\ AS\ file\,\ filename\ AS\ path\,\ kafka.partition\ AS\ p\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\,\ count\(\*\)\ AS\ n\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\,\ filename=true\)\ GROUP\ BY\ 1\,\ 2\,\ 3\)\ SELECT\ p\,\ lo\,\ hi\,\ n\ FROM\ f\ ORDER\ BY\ p\,\ lo make -s query
+2026-10-20 16:47:58,466 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+{"p": 0, "lo": 0, "hi": 3421, "n": 3422}
+{"p": 0, "lo": 3422, "hi": 6840, "n": 3419}
+{"p": 0, "lo": 6841, "hi": 10256, "n": 3416}
+{"p": 0, "lo": 10257, "hi": 13676, "n": 3420}
+{"p": 0, "lo": 13677, "hi": 17094, "n": 3418}
+{"p": 0, "lo": 17095, "hi": 20501, "n": 3407}
+{"p": 0, "lo": 20502, "hi": 23915, "n": 3414}
+{"p": 0, "lo": 23916, "hi": 26179, "n": 2264}
+{"p": 1, "lo": 0, "hi": 3452, "n": 3453}
+{"p": 1, "lo": 3453, "hi": 6902, "n": 3450}
+{"p": 1, "lo": 6903, "hi": 8950, "n": 2048}
+{"p": 1, "lo": 8951, "hi": 12496, "n": 3546}
+{"p": 1, "lo": 12497, "hi": 15940, "n": 3444}
+{"p": 1, "lo": 15941, "hi": 19377, "n": 3437}
+{"p": 1, "lo": 19378, "hi": 22817, "n": 3440}
+{"p": 1, "lo": 22818, "hi": 26257, "n": 3440}
+{"p": 1, "lo": 26258, "hi": 29699, "n": 3442}
+{"p": 1, "lo": 29700, "hi": 33127, "n": 3428}
+{"p": 1, "lo": 33128, "hi": 34608, "n": 1481}
+{"p": 2, "lo": 0, "hi": 3458, "n": 3459}
+{"p": 2, "lo": 3459, "hi": 6919, "n": 3461}
+{"p": 2, "lo": 6920, "hi": 9603, "n": 2684}
+{"p": 2, "lo": 9604, "hi": 13168, "n": 3565}
+{"p": 2, "lo": 13169, "hi": 16620, "n": 3452}
+{"p": 2, "lo": 16621, "hi": 20074, "n": 3454}
+{"p": 2, "lo": 20075, "hi": 23526, "n": 3452}
+{"p": 2, "lo": 23527, "hi": 26976, "n": 3450}
+{"p": 2, "lo": 26977, "hi": 30430, "n": 3454}
+{"p": 2, "lo": 30431, "hi": 33884, "n": 3454}
+{"p": 2, "lo": 33885, "hi": 37172, "n": 3288}
+
+## broker end offsets (--time -1) and log start offsets (--time -2)
+
+$ docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events --time -1
+events:0:26180
+events:1:34609
+events:2:37173
+
+$ docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events --time -2
+events:0:0
+events:1:0
+events:2:0
+
+## what each broker still holds on its own disk (history older than local.retention.ms is served from the table)
+
+$ make ls-local
+== kafka-1
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-0/00000000000000026180.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-1/00000000000000034609.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-2/00000000000000037173.log
+== kafka-2
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-0/00000000000000026180.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-1/00000000000000034609.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-2/00000000000000037173.log
+== kafka-3
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-0/00000000000000026180.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-1/00000000000000034609.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:47 /var/lib/kafka/data/events-2/00000000000000037173.log
+
+## upload lines of events-0 and errors
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'events-0.*(Copying|Copied|after becoming leader)'   # broker clock is UTC
+kafka-1-1  | [2026-10-20 14:45:42,113] INFO [RemoteLogManager=1 partition=spJrYToDQRauFkE5rlDNwg:events-0] Found the highest copiedRemoteOffset: Optional[(offset=-1, leaderEpoch=-1)] after becoming leader
+kafka-1-1  | [2026-10-20 14:45:56,611] INFO [RemoteLogManager=1 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Found the highest copiedRemoteOffset: Optional[(offset=-1, leaderEpoch=-1)] after becoming leader
+kafka-1-1  | [2026-10-20 14:46:06,614] INFO [RemoteLogManager=1 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 14:46:07,514] INFO [RemoteLogManager=1 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-1-1  | [2026-10-20 14:46:12,515] INFO [RemoteLogManager=1 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000003422.log to remote storage.
+kafka-2-1  | [2026-10-20 14:46:22,159] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Found the highest copiedRemoteOffset: Optional[(offset=3421, leaderEpoch=0)] after becoming leader
+kafka-2-1  | [2026-10-20 14:46:22,160] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000003422.log to remote storage.
+kafka-2-1  | [2026-10-20 14:46:23,171] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000003422.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 14:46:33,171] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000006841.log to remote storage.
+kafka-2-1  | [2026-10-20 14:46:33,465] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000006841.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 14:46:38,466] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000010257.log to remote storage.
+kafka-2-1  | [2026-10-20 14:46:38,730] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000010257.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 14:46:48,731] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000013677.log to remote storage.
+kafka-2-1  | [2026-10-20 14:46:48,938] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000013677.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 14:46:53,939] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000017095.log to remote storage.
+kafka-2-1  | [2026-10-20 14:46:54,152] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000017095.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 14:47:04,153] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000020502.log to remote storage.
+kafka-2-1  | [2026-10-20 14:47:04,395] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000020502.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 14:47:44,401] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copying 00000000000000023916.log to remote storage.
+kafka-2-1  | [2026-10-20 14:47:44,673] INFO [RemoteLogManager=2 partition=zPHh65mkRMOCXeix2R9GbA:events-0] Copied 00000000000000023916.log to remote storage with segment-id: ...
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'ERROR|WARN' | grep -iE 'RemoteLogManager|RLMCopyTask|RemoteStorage|iceberg|Failed to copy' | cut -c1-200
+
+## A) three-way comparison after the restart (leader of partition 0: broker 2)
+
+$ uv run python -m lab.pairs   # stdout = one JSON line
+2026-10-20 16:48:01,554 INFO __main__: log start offsets {0: 0, 1: 0, 2: 0}, end offsets {0: 26180, 1: 34609, 2: 37173}
+2026-10-20 16:48:01,685 INFO __main__: table holds 97962 rows
+2026-10-20 16:48:39,924 ERROR __main__: replay stopped early (no record for 30.0s) after 97968 records: p0 last 26171 of end 26180; p1 last 34594 of end 34609; p2 last 37164 of end 37173
+2026-10-20 16:48:39,925 INFO __main__: replay read 97968 records in 38.2 s (no record for 30.0s)
+2026-10-20 16:48:39,980 INFO __main__: table duplicates 0, table missing 0, replay duplicates 2479, replay missing 2473
+{"partitions": {"0": {"low": 0, "end_offset": 26180, "expected": 26180, "table_rows": 26180, "table_distinct": 26180, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 26180, "replay_distinct": 25488, "replay_duplicates": 692, "replay_missing": 692, "replay_missing_ranges": [[118, 122], [350, 354], [466, 469], [520, 523], [632, 640], [806, 809], [924, 925], [1159, 1160], [1273, 1277], [1337, 1338]], "replay_beyond_end": 0, "table_only": 692, "replay_only": 0}, "1": {"low": 0, "end_offset": 34609, "expected": 34609, "table_rows": 34609, "table_distinct": 34609, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 34610, "replay_distinct": 33748, "replay_duplicates": 862, "replay_missing": 861, "replay_missing_ranges": [[257, 263], [439, 441], [495, 497], [753, 753], [813, 813], [927, 927], [992, 992], [1108, 1112], [1171, 1171], [1345, 1352]], "replay_beyond_end": 0, "table_only": 861, "replay_only": 0}, "2": {"low": 0, "end_offset": 37173, "expected": 37173, "table_rows": 37173, "table_distinct": 37173, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 37178, "replay_distinct": 36253, "replay_duplicates": 925, "replay_missing": 920, "replay_missing_ranges": [[116, 117], [233, 236], [411, 412], [529, 530], [767, 770], [889, 895], [1069, 1070], [1121, 1124], [1252, 1252], [1366, 1369]], "replay_beyond_end": 0, "table_only": 920, "replay_only": 0}}, "totals": {"expected": 97962, "table_rows": 97962, "table_distinct": 97962, "table_duplicates": 0, "table_missing": 0, "table_beyond_end": 0, "replay_rows": 97968, "replay_distinct": 95489, "replay_duplicates": 2479, "replay_missing": 2473, "replay_beyond_end": 0, "table_only": 2473, "replay_only": 0}, "content": {"partitions": {"0": {"offsets_with_different_record": 24937, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}, "1": {"offsets_with_different_record": 30658, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 1}, "2": {"offsets_with_different_record": 33003, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 5}}, "totals": {"offsets_with_different_record": 88598, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 6}}, "replay_status": "no record for 30.0s"}
+
+partition 0: broker end offset 26180 (log start 0) | table rows 26180, duplicates 0, missing 0 [] | replay rows 26180, duplicates 692, missing 692 [[118, 122], [350, 354], [466, 469], [520, 523], [632, 640], [806, 809], [924, 925], [1159, 1160], [1273, 1277], [1337, 1338]] | in table only 692, in replay only 0
+partition 1: broker end offset 34609 (log start 0) | table rows 34609, duplicates 0, missing 0 [] | replay rows 34610, duplicates 862, missing 861 [[257, 263], [439, 441], [495, 497], [753, 753], [813, 813], [927, 927], [992, 992], [1108, 1112], [1171, 1171], [1345, 1352]] | in table only 861, in replay only 0
+partition 2: broker end offset 37173 (log start 0) | table rows 37173, duplicates 0, missing 0 [] | replay rows 37178, duplicates 925, missing 920 [[116, 117], [233, 236], [411, 412], [529, 530], [767, 770], [889, 895], [1069, 1070], [1121, 1124], [1252, 1252], [1366, 1369]] | in table only 920, in replay only 0
+content: offsets whose record differs between table and replay 88598, order_ids repeated in the replay 6, in the table 0
+replay status: no record for 30.0s
+total: broker records 97962, table rows 97962, table duplicates 0, table missing 0, replay rows 97968, replay duplicates 2479, replay missing 2473
+
+$ make replay   # the existing replay summary, for the record
+2026-10-20 16:50:41,337 ERROR __main__: replay failed: read 95489 of 97962 records in 120.0s
+make: *** [replay] Error 1
+
+## key mapping (after the restart): keys that appear in more than one partition (expected: none)
+
+$ SQL=SELECT\ value.customer_id\ AS\ customer_id\,\ count\(DISTINCT\ kafka.partition\)\ AS\ partitions\ FROM\ \{table\}\ GROUP\ BY\ 1\ HAVING\ count\(DISTINCT\ kafka.partition\)\ \>\ 1 make -s query
+2026-10-20 16:50:41,524 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+
+$ SQL=SELECT\ count\(DISTINCT\ value.customer_id\)\ AS\ distinct_customer_ids\,\ count\(\*\)\ AS\ row_count\,\ count\(\*\)\ FILTER\ \(WHERE\ key\ \<\>\ value.customer_id\)\ AS\ rows_where_key_differs_from_customer_id\ FROM\ \{table\} make -s query
+2026-10-20 16:50:41,714 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+{"distinct_customer_ids": 500, "row_count": 97962, "rows_where_key_differs_from_customer_id": 0}
+
+## B) stop broker 2, the current leader of partition 0, then compare again
+
+$ make broker-stop BROKER=2
+docker compose stop kafka-2
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+
+[lab] ok: a new leader for partition 0 (not broker 2)
+# make topic-describe now asks broker 1 (VIA=1)
+$ make topic-describe
+docker compose exec kafka-1 /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092 --describe --topic events
+Topic: events	TopicId: zPHh65mkRMOCXeix2R9GbA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=262144,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 1	Replicas: 1,2,3	Isr: 3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 3	Replicas: 2,3,1	Isr: 3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 3	Replicas: 3,1,2	Isr: 3,1	Elr: 	LastKnownElr: 
+
+$ uv run python -m lab.pairs   # stdout = one JSON line
+2026-10-20 16:50:48,076 INFO __main__: log start offsets {0: 0, 1: 0, 2: 0}, end offsets {0: 26180, 1: 34609, 2: 37173}
+2026-10-20 16:50:48,199 INFO __main__: table holds 97962 rows
+2026-10-20 16:51:29,189 ERROR __main__: replay stopped early (no record for 30.0s) after 97968 records: p0 last 26171 of end 26180; p1 last 34594 of end 34609; p2 last 37164 of end 37173
+2026-10-20 16:51:29,190 INFO __main__: replay read 97968 records in 41.0 s (no record for 30.0s)
+2026-10-20 16:51:29,247 INFO __main__: table duplicates 0, table missing 0, replay duplicates 2479, replay missing 2473
+{"partitions": {"0": {"low": 0, "end_offset": 26180, "expected": 26180, "table_rows": 26180, "table_distinct": 26180, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 26180, "replay_distinct": 25488, "replay_duplicates": 692, "replay_missing": 692, "replay_missing_ranges": [[118, 122], [350, 354], [466, 469], [520, 523], [632, 640], [806, 809], [924, 925], [1159, 1160], [1273, 1277], [1337, 1338]], "replay_beyond_end": 0, "table_only": 692, "replay_only": 0}, "1": {"low": 0, "end_offset": 34609, "expected": 34609, "table_rows": 34609, "table_distinct": 34609, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 34610, "replay_distinct": 33748, "replay_duplicates": 862, "replay_missing": 861, "replay_missing_ranges": [[257, 263], [439, 441], [495, 497], [753, 753], [813, 813], [927, 927], [992, 992], [1108, 1112], [1171, 1171], [1345, 1352]], "replay_beyond_end": 0, "table_only": 861, "replay_only": 0}, "2": {"low": 0, "end_offset": 37173, "expected": 37173, "table_rows": 37173, "table_distinct": 37173, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 37178, "replay_distinct": 36253, "replay_duplicates": 925, "replay_missing": 920, "replay_missing_ranges": [[116, 117], [233, 236], [411, 412], [529, 530], [767, 770], [889, 895], [1069, 1070], [1121, 1124], [1252, 1252], [1366, 1369]], "replay_beyond_end": 0, "table_only": 920, "replay_only": 0}}, "totals": {"expected": 97962, "table_rows": 97962, "table_distinct": 97962, "table_duplicates": 0, "table_missing": 0, "table_beyond_end": 0, "replay_rows": 97968, "replay_distinct": 95489, "replay_duplicates": 2479, "replay_missing": 2473, "replay_beyond_end": 0, "table_only": 2473, "replay_only": 0}, "content": {"partitions": {"0": {"offsets_with_different_record": 24937, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}, "1": {"offsets_with_different_record": 30658, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 1}, "2": {"offsets_with_different_record": 33003, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 5}}, "totals": {"offsets_with_different_record": 88598, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 6}}, "replay_status": "no record for 30.0s"}
+
+partition 0: broker end offset 26180 (log start 0) | table rows 26180, duplicates 0, missing 0 [] | replay rows 26180, duplicates 692, missing 692 [[118, 122], [350, 354], [466, 469], [520, 523], [632, 640], [806, 809], [924, 925], [1159, 1160], [1273, 1277], [1337, 1338]] | in table only 692, in replay only 0
+partition 1: broker end offset 34609 (log start 0) | table rows 34609, duplicates 0, missing 0 [] | replay rows 34610, duplicates 862, missing 861 [[257, 263], [439, 441], [495, 497], [753, 753], [813, 813], [927, 927], [992, 992], [1108, 1112], [1171, 1171], [1345, 1352]] | in table only 861, in replay only 0
+partition 2: broker end offset 37173 (log start 0) | table rows 37173, duplicates 0, missing 0 [] | replay rows 37178, duplicates 925, missing 920 [[116, 117], [233, 236], [411, 412], [529, 530], [767, 770], [889, 895], [1069, 1070], [1121, 1124], [1252, 1252], [1366, 1369]] | in table only 920, in replay only 0
+content: offsets whose record differs between table and replay 88598, order_ids repeated in the replay 6, in the table 0
+replay status: no record for 30.0s
+total: broker records 97962, table rows 97962, table duplicates 0, table missing 0, replay rows 97968, replay duplicates 2479, replay missing 2473
+
+## key mapping (after stopping the leader): keys that appear in more than one partition (expected: none)
+
+$ SQL=SELECT\ value.customer_id\ AS\ customer_id\,\ count\(DISTINCT\ kafka.partition\)\ AS\ partitions\ FROM\ \{table\}\ GROUP\ BY\ 1\ HAVING\ count\(DISTINCT\ kafka.partition\)\ \>\ 1 make -s query
+2026-10-20 16:51:29,416 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+
+$ SQL=SELECT\ count\(DISTINCT\ value.customer_id\)\ AS\ distinct_customer_ids\,\ count\(\*\)\ AS\ row_count\,\ count\(\*\)\ FILTER\ \(WHERE\ key\ \<\>\ value.customer_id\)\ AS\ rows_where_key_differs_from_customer_id\ FROM\ \{table\} make -s query
+2026-10-20 16:51:29,574 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00032-519479de-5ff9-450b-89bc-9641aa8b8f7b.metadata.json
+{"distinct_customer_ids": 500, "row_count": 97962, "rows_where_key_differs_from_customer_id": 0}
+
+$ make broker-start BROKER=2
+docker compose start kafka-2
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+
+## summary
+
+$ curl -s http://localhost:8181/v1/namespaces/default/tables/events | python3 (one line per snapshot, time in UTC)
+snapshots: 32 | current-snapshot-id: 7512639575784432257
+14:46:02.177 6647300913513393114 append added-records=None added-data-files=None total-records=0
+14:46:02.595 5527758429079090340 append added-records=None added-data-files=None total-records=0
+14:46:03.434 1973601984803317790 append added-records=3459 added-data-files=1 total-records=3459
+14:46:03.585 7295477068757605487 append added-records=3453 added-data-files=1 total-records=6912
+14:46:07.438 4254881516771809281 append added-records=3422 added-data-files=1 total-records=10334
+14:46:08.928 5443440691497457864 append added-records=3461 added-data-files=1 total-records=13795
+14:46:09.153 741470893943322749 append added-records=3450 added-data-files=1 total-records=17245
+14:46:19.477 5057477619484645255 append added-records=2048 added-data-files=1 total-records=19293
+14:46:23.118 8498928622981890111 append added-records=3419 added-data-files=1 total-records=22712
+14:46:23.415 658178432010467991 append added-records=2684 added-data-files=1 total-records=25396
+14:46:24.757 1422645015679753621 append added-records=3546 added-data-files=1 total-records=28942
+14:46:28.680 4712660569542845748 append added-records=3565 added-data-files=1 total-records=32507
+14:46:28.855 3554518882351121062 append added-records=3452 added-data-files=1 total-records=35959
+14:46:30.037 6873646361318278865 append added-records=3444 added-data-files=1 total-records=39403
+14:46:33.361 6736623418501051269 append added-records=3416 added-data-files=1 total-records=42819
+14:46:34.128 8180101311377343599 append added-records=3454 added-data-files=1 total-records=46273
+14:46:35.308 5053271655363802003 append added-records=3437 added-data-files=1 total-records=49710
+14:46:38.637 4769184851986745286 append added-records=3420 added-data-files=1 total-records=53130
+14:46:44.400 1507573474169375303 append added-records=3452 added-data-files=1 total-records=56582
+14:46:45.525 8255955178641218245 append added-records=3440 added-data-files=1 total-records=60022
+14:46:48.893 2130257023378089067 append added-records=3418 added-data-files=1 total-records=63440
+14:46:49.670 7976563158020256260 append added-records=3450 added-data-files=1 total-records=66890
+14:46:50.802 1608518036740807385 append added-records=3440 added-data-files=1 total-records=70330
+14:46:54.109 7672747475713078623 append added-records=3407 added-data-files=1 total-records=73737
+14:46:54.933 8482322938066279075 append added-records=3454 added-data-files=1 total-records=77191
+14:46:56.079 8657410149262099826 append added-records=3442 added-data-files=1 total-records=80633
+14:47:00.155 1116022113345407796 append added-records=3454 added-data-files=1 total-records=84087
+14:47:04.335 5473747274860390485 append added-records=3414 added-data-files=1 total-records=87501
+14:47:06.361 6187927196086230935 append added-records=3428 added-data-files=1 total-records=90929
+14:47:40.443 7528844537135458047 append added-records=3288 added-data-files=1 total-records=94217
+14:47:41.581 7596449409774544872 append added-records=1481 added-data-files=1 total-records=95698
+14:47:44.567 7512639575784432257 append added-records=2264 added-data-files=1 total-records=97962
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removed
+

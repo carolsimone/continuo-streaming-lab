@@ -1,0 +1,288 @@
+## settings: segment.bytes=262144, local.retention.ms=3600000 for the first replay, 30000 for the second; batch 20000 at 2000/s keyed by customer_id
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_BYTES=262144 LOCAL_RETENTION_MS=3600000 make topic
+Created topic events.
+Topic: events	TopicId: iYp7y2y2RjmJL2dVV8dpSg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=3600000,segment.bytes=262144,retention.ms=-1
+
+$ make topic-describe
+docker compose exec kafka-1 /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092 --describe --topic events
+Topic: events	TopicId: iYp7y2y2RjmJL2dVV8dpSg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=3600000,segment.bytes=262144,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
+
+$ make -s batch N=20000 PACE=2000 LAB_KEY_FIELD=customer_id
+{"produced": 20000, "failed": 0, "first_seq": 0, "last_seq": 19999}
+
+[lab] table rows: 10323 (wanted 10000)
+## broker end offsets and what each broker holds on disk (nothing is deleted yet)
+
+$ docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events --time -1
+events:0:6066
+events:1:6727
+events:2:7207
+
+$ make ls-local
+== kafka-1
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-0.07fdac574b6e4620ba4031d7b2f218b2-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261849 Oct 20 14:06 /var/lib/kafka/data/events-0/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 202937 Oct 20 14:06 /var/lib/kafka/data/events-0/00000000000000003415.log
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-1.2b35b1a313fd4143b163b0b95e39f82a-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261851 Oct 20 14:06 /var/lib/kafka/data/events-1/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 249453 Oct 20 14:06 /var/lib/kafka/data/events-1/00000000000000003449.log
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-2.5b713dfb57f64f7e85122225b8474389-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 262117 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261488 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000003459.log
+-rw-r--r-- 1 appuser appuser  22063 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000006915.log
+== kafka-2
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-0.a115b506152f40c2a3ca72fb671519e2-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261849 Oct 20 14:06 /var/lib/kafka/data/events-0/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 202937 Oct 20 14:06 /var/lib/kafka/data/events-0/00000000000000003415.log
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-1.3c05c37bf3dd4d039450b74aedd59582-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261851 Oct 20 14:06 /var/lib/kafka/data/events-1/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 249453 Oct 20 14:06 /var/lib/kafka/data/events-1/00000000000000003449.log
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-2.2d86b72562f649b69bf8706122b883db-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 262117 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261488 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000003459.log
+-rw-r--r-- 1 appuser appuser  22063 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000006915.log
+== kafka-3
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-0.cc5d3f8ca24d4a29a8f300305aa513cf-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261849 Oct 20 14:06 /var/lib/kafka/data/events-0/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 202937 Oct 20 14:06 /var/lib/kafka/data/events-0/00000000000000003415.log
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-1.88c14e2124a64a3299aa7c7ae8061cc7-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261851 Oct 20 14:06 /var/lib/kafka/data/events-1/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 249453 Oct 20 14:06 /var/lib/kafka/data/events-1/00000000000000003449.log
+-rw-r--r-- 1 appuser appuser      0 Oct 20 14:06 /var/lib/kafka/data/events-2.168e6b95682145328a62d72fcfef762b-delete/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 262117 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000000000.log
+-rw-r--r-- 1 appuser appuser 261488 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000003459.log
+-rw-r--r-- 1 appuser appuser  22063 Oct 20 14:06 /var/lib/kafka/data/events-2/00000000000000006915.log
+
+## 1) replay while every segment is still on the brokers' disks (the open segments are not in the table yet)
+
+$ uv run python -m lab.pairs   # stdout = one JSON line
+2026-10-20 16:06:52,281 INFO __main__: log start offsets {0: 0, 1: 0, 2: 0}, end offsets {0: 6066, 1: 6727, 2: 7207}
+2026-10-20 16:06:52,340 INFO __main__: table holds 13779 rows
+2026-10-20 16:06:53,285 INFO __main__: replay read 20000 records in 0.9 s (complete)
+2026-10-20 16:06:53,294 INFO __main__: table duplicates 0, table missing 6221, replay duplicates 0, replay missing 0
+{"partitions": {"0": {"low": 0, "end_offset": 6066, "expected": 6066, "table_rows": 3415, "table_distinct": 3415, "table_duplicates": 0, "table_missing": 2651, "table_missing_ranges": [[3415, 6065]], "table_beyond_end": 0, "replay_rows": 6066, "replay_distinct": 6066, "replay_duplicates": 0, "replay_missing": 0, "replay_missing_ranges": [], "replay_beyond_end": 0, "table_only": 0, "replay_only": 2651}, "1": {"low": 0, "end_offset": 6727, "expected": 6727, "table_rows": 3449, "table_distinct": 3449, "table_duplicates": 0, "table_missing": 3278, "table_missing_ranges": [[3449, 6726]], "table_beyond_end": 0, "replay_rows": 6727, "replay_distinct": 6727, "replay_duplicates": 0, "replay_missing": 0, "replay_missing_ranges": [], "replay_beyond_end": 0, "table_only": 0, "replay_only": 3278}, "2": {"low": 0, "end_offset": 7207, "expected": 7207, "table_rows": 6915, "table_distinct": 6915, "table_duplicates": 0, "table_missing": 292, "table_missing_ranges": [[6915, 7206]], "table_beyond_end": 0, "replay_rows": 7207, "replay_distinct": 7207, "replay_duplicates": 0, "replay_missing": 0, "replay_missing_ranges": [], "replay_beyond_end": 0, "table_only": 0, "replay_only": 292}}, "totals": {"expected": 20000, "table_rows": 13779, "table_distinct": 13779, "table_duplicates": 0, "table_missing": 6221, "table_beyond_end": 0, "replay_rows": 20000, "replay_distinct": 20000, "replay_duplicates": 0, "replay_missing": 0, "replay_beyond_end": 0, "table_only": 0, "replay_only": 6221}, "content": {"partitions": {"0": {"offsets_with_different_record": 0, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}, "1": {"offsets_with_different_record": 0, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}, "2": {"offsets_with_different_record": 0, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}}, "totals": {"offsets_with_different_record": 0, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}}, "replay_status": "complete"}
+
+partition 0: broker end offset 6066 (log start 0) | table rows 3415, duplicates 0, missing 2651 [[3415, 6065]] | replay rows 6066, duplicates 0, missing 0 [] | in table only 0, in replay only 2651
+partition 1: broker end offset 6727 (log start 0) | table rows 3449, duplicates 0, missing 3278 [[3449, 6726]] | replay rows 6727, duplicates 0, missing 0 [] | in table only 0, in replay only 3278
+partition 2: broker end offset 7207 (log start 0) | table rows 6915, duplicates 0, missing 292 [[6915, 7206]] | replay rows 7207, duplicates 0, missing 0 [] | in table only 0, in replay only 292
+content: offsets whose record differs between table and replay 0, order_ids repeated in the replay 0, in the table 0
+replay status: complete
+total: broker records 20000, table rows 13779, table duplicates 0, table missing 6221, replay rows 20000, replay duplicates 0, replay missing 0
+
+## switch to local.retention.ms=30000 and wait until the oldest local segments are deleted
+
+$ docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --alter --entity-type topics --entity-name events --add-config local.retention.ms=30000
+Completed updating config for topic events.
+
+[lab] ok: the first segment (base offset 0) is gone from every broker
+[lab] table rows: 20000 (wanted 20000)
+$ make ls-local
+== kafka-1
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-0/00000000000000006066.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-1/00000000000000006727.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-2/00000000000000007207.log
+== kafka-2
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-0/00000000000000006066.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-1/00000000000000006727.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-2/00000000000000007207.log
+== kafka-3
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-0/00000000000000006066.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-1/00000000000000006727.log
+-rw-r--r-- 1 appuser appuser 0 Oct 20 14:07 /var/lib/kafka/data/events-2/00000000000000007207.log
+
+## 2) replay of the same topic, history now served from tiered storage
+
+$ uv run python -m lab.pairs   # stdout = one JSON line
+2026-10-20 16:07:29,444 INFO __main__: log start offsets {0: 0, 1: 0, 2: 0}, end offsets {0: 6066, 1: 6727, 2: 7207}
+2026-10-20 16:07:29,531 INFO __main__: table holds 20000 rows
+2026-10-20 16:08:00,863 ERROR __main__: replay stopped early (no record for 30.0s) after 20002 records: p0 last 6058 of end 6066; p1 last 6717 of end 6727; p2 last 7194 of end 7207
+2026-10-20 16:08:00,863 INFO __main__: replay read 20002 records in 31.3 s (no record for 30.0s)
+2026-10-20 16:08:00,874 INFO __main__: table duplicates 0, table missing 0, replay duplicates 580, replay missing 578
+{"partitions": {"0": {"low": 0, "end_offset": 6066, "expected": 6066, "table_rows": 6066, "table_distinct": 6066, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 6066, "replay_distinct": 5908, "replay_duplicates": 158, "replay_missing": 158, "replay_missing_ranges": [[116, 121], [177, 177], [349, 354], [468, 472], [524, 525], [642, 642], [702, 702], [816, 816], [874, 876], [935, 937]], "replay_beyond_end": 0, "table_only": 158, "replay_only": 0}, "1": {"low": 0, "end_offset": 6727, "expected": 6727, "table_rows": 6727, "table_distinct": 6727, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 6727, "replay_distinct": 6527, "replay_duplicates": 200, "replay_missing": 200, "replay_missing_ranges": [[258, 266], [434, 436], [495, 497], [603, 607], [729, 733], [967, 969], [1095, 1095], [1151, 1153], [1269, 1274], [1448, 1450]], "replay_beyond_end": 0, "table_only": 200, "replay_only": 0}, "2": {"low": 0, "end_offset": 7207, "expected": 7207, "table_rows": 7207, "table_distinct": 7207, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 7209, "replay_distinct": 6987, "replay_duplicates": 222, "replay_missing": 220, "replay_missing_ranges": [[236, 240], [358, 360], [479, 479], [660, 663], [777, 783], [909, 911], [1023, 1023], [1144, 1144], [1268, 1269], [1398, 1398]], "replay_beyond_end": 0, "table_only": 220, "replay_only": 0}}, "totals": {"expected": 20000, "table_rows": 20000, "table_distinct": 20000, "table_duplicates": 0, "table_missing": 0, "table_beyond_end": 0, "replay_rows": 20002, "replay_distinct": 19422, "replay_duplicates": 580, "replay_missing": 578, "replay_beyond_end": 0, "table_only": 578, "replay_only": 0}, "content": {"partitions": {"0": {"offsets_with_different_record": 5760, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}, "1": {"offsets_with_different_record": 6293, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0}, "2": {"offsets_with_different_record": 6788, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 2}}, "totals": {"offsets_with_different_record": 18841, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 2}}, "replay_status": "no record for 30.0s"}
+
+partition 0: broker end offset 6066 (log start 0) | table rows 6066, duplicates 0, missing 0 [] | replay rows 6066, duplicates 158, missing 158 [[116, 121], [177, 177], [349, 354], [468, 472], [524, 525], [642, 642], [702, 702], [816, 816], [874, 876], [935, 937]] | in table only 158, in replay only 0
+partition 1: broker end offset 6727 (log start 0) | table rows 6727, duplicates 0, missing 0 [] | replay rows 6727, duplicates 200, missing 200 [[258, 266], [434, 436], [495, 497], [603, 607], [729, 733], [967, 969], [1095, 1095], [1151, 1153], [1269, 1274], [1448, 1450]] | in table only 200, in replay only 0
+partition 2: broker end offset 7207 (log start 0) | table rows 7207, duplicates 0, missing 0 [] | replay rows 7209, duplicates 222, missing 220 [[236, 240], [358, 360], [479, 479], [660, 663], [777, 783], [909, 911], [1023, 1023], [1144, 1144], [1268, 1269], [1398, 1398]] | in table only 220, in replay only 0
+content: offsets whose record differs between table and replay 18841, order_ids repeated in the replay 2, in the table 0
+replay status: no record for 30.0s
+total: broker records 20000, table rows 20000, table duplicates 0, table missing 0, replay rows 20002, replay duplicates 580, replay missing 578
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Network continuo-streaming-lab_default  Removed
+

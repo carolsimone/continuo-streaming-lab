@@ -24,16 +24,8 @@ KICKER=3000
 PACE=2000
 WORK="$(mktemp -d)"
 trap 'rm -rf "${WORK}"' EXIT
-OFFSETS="docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events"
 KEY_SQL='SELECT value.customer_id AS customer_id, count(DISTINCT kafka.partition) AS partitions FROM {table} GROUP BY 1 HAVING count(DISTINCT kafka.partition) > 1'
 COPY_RE='partition=[^ ]*:events-0\] Copy(ing|ied) '
-
-utc_hms() { python3 -c 'import datetime as d; print(d.datetime.now(d.timezone.utc).strftime("%H:%M:%S.%f")[:-3])'; }
-
-# leader_of <partition>: broker id leading the partition, from kafka-topics --describe.
-leader_of() {
-  make -s topic-describe 2>/dev/null | grep -E "Partition: $1[[:space:]]" | sed -E 's/.*Leader: ([0-9]+).*/\1/' | tr -d '\r'
-}
 
 # wait_log_line <service> <egrep pattern> <seconds>: follow new log lines, succeed when one matches.
 wait_log_line() {
@@ -55,22 +47,6 @@ wait_copied() {
     (( SECONDS < deadline )) || return 1
     sleep 1
   done
-}
-
-# wait_rows_at_least <rows> <seconds>: poll the table (non-fatal), print the last row count.
-wait_rows_at_least() {
-  local want=$1 deadline=$((SECONDS + $2)) rows=0 out
-  until (( rows >= want )); do
-    (( SECONDS < deadline )) || { log "table holds ${rows} rows after waiting, wanted ${want}"; return 1; }
-    sleep 5
-    out="$(make -s query 2>/dev/null)" && rows="$(jget row_count <<<"${out}")" || rows=0
-  done
-  log "table rows: ${rows} (wanted ${want})"
-}
-
-# end_total: sum of the broker end offsets over the partitions.
-end_total() {
-  ${OFFSETS} --time -1 2>/dev/null | awk -F: '{s += $3} END {print s}'
 }
 
 # snapshots: one line per snapshot of the catalog's current table metadata.
@@ -99,35 +75,6 @@ files_state() {
   query "${files} SELECT count(*) AS overlapping_file_pairs_same_partition FROM f a JOIN f b ON a.p = b.p AND a.path < b.path AND a.lo <= b.hi AND b.lo <= a.hi"
   query "${files} SELECT count(*) AS parquet_files_in_bucket_not_in_metadata FROM f WHERE path NOT IN (SELECT file_path FROM iceberg_metadata('${loc}'))"
   query "${files} SELECT p, lo, hi, n FROM f ORDER BY p, lo"
-}
-
-# pairs_check <label>: the three-way comparison, one JSON line plus a per-partition summary.
-pairs_check() {
-  local out rc=0
-  echo "\$ uv run python -m lab.pairs   # stdout = one JSON line"
-  out="$(uv run python -m lab.pairs 2>"${WORK}/pairs.err")" || rc=$?
-  grep -E ' (INFO|ERROR) lab\.pairs' "${WORK}/pairs.err" | cut -c1-240
-  echo "${out}"
-  (( rc == 0 )) || echo "(exit code ${rc})"
-  echo
-  PAIRS="${out}" python3 - <<'PY' 2>&1
-import json
-import os
-
-r = json.loads(os.environ["PAIRS"]) if os.environ["PAIRS"] else None
-if r is None:
-    raise SystemExit("no result")
-for p, v in r["partitions"].items():
-    print(f"partition {p}: broker end offset {v['end_offset']} (log start {v['low']}) | table rows {v['table_rows']}, "
-          f"duplicates {v['table_duplicates']}, missing {v['table_missing']} {v['table_missing_ranges']} | "
-          f"replay rows {v['replay_rows']}, duplicates {v['replay_duplicates']}, missing {v['replay_missing']} "
-          f"{v['replay_missing_ranges']} | in table only {v['table_only']}, in replay only {v['replay_only']}")
-t = r["totals"]
-print(f"total: broker records {t['expected']}, table rows {t['table_rows']}, table duplicates {t['table_duplicates']}, "
-      f"table missing {t['table_missing']}, replay rows {t['replay_rows']}, replay duplicates {t['replay_duplicates']}, "
-      f"replay missing {t['replay_missing']}")
-PY
-  echo
 }
 
 key_check() {
@@ -225,7 +172,7 @@ log_lines
 note "A) three-way comparison after the restart (leader of partition 0: broker ${new})"
 pairs_check A
 echo "\$ make replay   # the existing replay summary, for the record"
-make -s replay 2>&1 | grep -v ' INFO httpx' | cut -c1-400
+(make -s replay 2>&1 || true) | grep -v ' INFO httpx' | grep -v rdkafka | cut -c1-400
 echo
 key_check "after the restart"
 
