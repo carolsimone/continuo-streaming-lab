@@ -36,10 +36,10 @@ MC := $(COMPOSE) run --rm --no-deps -T --entrypoint sh minio-init -c
 
 .DEFAULT_GOAL := help
 .PHONY: help plugin up down rebuild clean clean-plugin ps logs produce produce-stop batch \
-        topic topic-describe ls-minio ls-local replay broker-stop broker-start test
+        topic topic-describe ls-minio ls-local replay query broker-stop broker-start test
 
 help: ## List targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
+	@grep -hE '^[a-z-]+:.*## ' $(firstword $(MAKEFILE_LIST)) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
 
 plugin: plugin/.installed ## Download the Aiven plugin into ./plugin (checksum-verified)
 
@@ -107,6 +107,9 @@ ls-local: ## List the segments each broker still holds on its own disk
 
 replay: ## Replay events from offset 0 (served from MinIO once local segments are gone)
 	uv run python -m lab.replay
+
+query: ## Query the Iceberg table via DuckDB (SQL="... FROM {table}")
+	uv run python -m lab.query $(if $(SQL),--sql "$(SQL)")
 
 broker-stop: ## Stop one broker: make broker-stop BROKER=2
 	@test -n "$(BROKER)" || { echo "usage: make broker-stop BROKER=1|2|3" >&2; exit 2; }
