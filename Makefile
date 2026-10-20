@@ -109,7 +109,7 @@ replay: ## Replay events from offset 0 (served from MinIO once local segments ar
 	uv run python -m lab.replay
 
 query: ## Query the Iceberg table via DuckDB (SQL="... FROM {table}")
-	uv run python -m lab.query $(if $(SQL),--sql "$(SQL)")
+	uv run python -m lab.query $${SQL:+--sql "$$SQL"}
 
 broker-stop: ## Stop one broker: make broker-stop BROKER=2
 	@test -n "$(BROKER)" || { echo "usage: make broker-stop BROKER=1|2|3" >&2; exit 2; }

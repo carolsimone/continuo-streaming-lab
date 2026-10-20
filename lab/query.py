@@ -8,6 +8,7 @@ import argparse
 import json
 import logging
 import sys
+import urllib.error
 
 import duckdb
 
@@ -23,12 +24,17 @@ DEFAULT_SQL = (
 
 
 def render_sql(sql: str, metadata_location: str) -> str:
-    return sql.replace("{table}", f"iceberg_scan('{metadata_location}')")
+    escaped = metadata_location.replace("'", "''")  # the location sits inside a SQL string literal
+    return sql.replace("{table}", f"iceberg_scan('{escaped}')")
 
 
 def connect(minio_endpoint: str) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect()
-    con.execute("INSTALL iceberg; LOAD iceberg; INSTALL httpfs; LOAD httpfs;")
+    try:
+        con.execute("INSTALL iceberg; LOAD iceberg; INSTALL httpfs; LOAD httpfs;")
+    except duckdb.Error:
+        log.error("the iceberg and httpfs extensions need a one-time online install (INSTALL downloads them)")
+        raise
     con.execute(
         "CREATE SECRET lab_minio (TYPE S3, KEY_ID 'minioadmin', SECRET 'minioadmin', "
         f"ENDPOINT '{minio_endpoint}', URL_STYLE 'path', USE_SSL false, REGION 'us-east-1')"
@@ -61,8 +67,11 @@ def main(argv: list[str] | None = None) -> int:
             args.namespace, args.table,
         )
         return 3
-    except Exception as exc:
+    except (urllib.error.URLError, OSError) as exc:  # HTTPError is a URLError; timeouts are OSError
         log.error("cannot reach the catalog at %s: %s", args.rest, exc)
+        return 1
+    except (ValueError, KeyError) as exc:  # not JSON, or no "metadata-location" in it
+        log.error("unexpected catalog response from %s: %r", args.rest, exc)
         return 1
     log.info("metadata location: %s", location)
     try:
