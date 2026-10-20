@@ -144,8 +144,8 @@ lists both buckets (`kafka-tiered`, empty in this mode, and `warehouse`). The fi
   iceberg-rest`, but after `make down` and `make up STAGE=iceberg` the catalog is empty and the Parquet
   files stay orphaned in `warehouse`.
 - Record keys must be Avro: the plugin reads the key through the schema registry as well. `STAGE=iceberg`
-  makes the producer send Avro keys; with string keys the brokers logged `Error deserializing schema ID` / `Unknown magic byte!` and no
-  table was created in the run recorded in the findings.
+  makes the producer send Avro keys; with string keys the brokers logged `Error deserializing schema ID` (all three brokers) / `Unknown magic byte!`
+  (seen on kafka-3 only in the transcript) and no table was created in the run recorded in the findings.
 - Rows appear only after a segment is uploaded. The last open segment of each partition uploads after
   the idle roll, about 35 to 40 seconds after the last write, so until then `make query` reports no table
   (the tool exits with status 3, which `make` reports as `Error 3`) or fewer rows.
