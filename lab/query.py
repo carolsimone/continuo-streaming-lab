@@ -5,6 +5,7 @@ metadata -> manifests -> Parquet files directly in MinIO.
 """
 
 import argparse
+import http.client
 import json
 import logging
 import sys
@@ -67,10 +68,10 @@ def main(argv: list[str] | None = None) -> int:
             args.namespace, args.table,
         )
         return 3
-    except (urllib.error.URLError, OSError) as exc:  # HTTPError is a URLError; timeouts are OSError
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:  # HTTPError is a URLError; timeouts are OSError; garbled replies raise HTTPException
         log.error("cannot reach the catalog at %s: %s", args.rest, exc)
         return 1
-    except (ValueError, KeyError) as exc:  # not JSON, or no "metadata-location" in it
+    except (ValueError, KeyError, TypeError) as exc:  # not JSON, no "metadata-location" in it, or JSON that is not an object
         log.error("unexpected catalog response from %s: %r", args.rest, exc)
         return 1
     log.info("metadata location: %s", location)

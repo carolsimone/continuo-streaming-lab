@@ -89,6 +89,60 @@ def test_unexpected_catalog_response_exits_1_and_says_so(capsys):
     assert "cannot reach" not in captured.err
 
 
+def test_parse_args_defaults():
+    args = parse_args([])
+    assert args.rest == "http://localhost:8181"
+    assert args.minio == "localhost:9000"
+
+
+def test_parse_args_defaults_follow_env_at_parse_time(monkeypatch):
+    monkeypatch.setenv("ICEBERG_REST_PORT", "18181")
+    monkeypatch.setenv("MINIO_API_PORT", "19000")
+    args = parse_args([])
+    assert args.rest == "http://localhost:18181"
+    assert args.minio == "localhost:19000"
+
+
+def test_garbled_http_response_exits_1_as_unreachable_catalog(capsys):
+    class Garbled(BaseHTTPRequestHandler):
+        def handle(self):  # not an HTTP response at all: http.client raises BadStatusLine (an HTTPException)
+            self.rfile.readline()
+            self.wfile.write(b"this is not http\r\n\r\n")
+
+    server = _serve(Garbled)
+    try:
+        code = main(["--rest", f"http://127.0.0.1:{server.server_port}"])
+    finally:
+        _stop(server)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.out == ""
+    assert "cannot reach the catalog at" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_json_that_is_not_an_object_exits_1_as_unexpected_response(capsys):
+    class NotAnObject(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"[]")  # valid JSON, but indexing a list by "metadata-location" raises TypeError
+
+        def log_message(self, *args):
+            pass
+
+    server = _serve(NotAnObject)
+    try:
+        code = main(["--rest", f"http://127.0.0.1:{server.server_port}"])
+    finally:
+        _stop(server)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.out == ""
+    assert "unexpected catalog response" in captured.err
+    assert "cannot reach" not in captured.err
+
+
 def test_connect_hints_at_one_time_online_install_when_extension_install_fails(monkeypatch, caplog):
     class Con:
         def execute(self, sql):
