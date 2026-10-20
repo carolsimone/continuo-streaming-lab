@@ -27,3 +27,9 @@ Stage 2 experiments 6 and 7 (findings: `docs/findings/03-freshness-and-duplicate
    when the leader of partition 0 is restarted and whether it is killed (see the header of the script). It uses
    `python -m lab.pairs`, which compares the table, a replay of the topic and the broker end offsets by
    `(partition, offset)`.
+7. `stage2-replay-kafka-tools.sh` is independent and ends with `make clean` (about 6 minutes). It checks the replay result of
+   experiment 7 without the lab's client: `kafka-dump-log.sh` on partition 0's original segment and offset index before upload,
+   Kafka's `kafka-console-consumer.sh` on the local log and then on the tiered history, raw Fetch requests (`rawfetch.py`,
+   standard library only) to each partition's leader, and `python -m lab.pairs` last for comparison. The helpers
+   `cc_compare.py`, `dump_to_jsonl.py`, `rows_compare.py`, `index_vs_table.py` and `fetch_vs_table.py` compare these outputs
+   (standard library only; see each file's docstring). `KT_PACE`, `KT_BATCH` and `KT_DEEP` choose the batch (see the header).
