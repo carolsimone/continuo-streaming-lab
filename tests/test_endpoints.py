@@ -33,7 +33,14 @@ def test_parse_args_defaults_follow_env(monkeypatch):
 
 def test_empty_env_values_fall_back_to_defaults(monkeypatch):
     # `make` exports an empty string for a port that .env does not define; compose treats that as unset too.
-    for name in ("KAFKA_1_PORT", "KAFKA_2_PORT", "KAFKA_3_PORT", "SCHEMA_REGISTRY_PORT", "MINIO_API_PORT", "ICEBERG_REST_PORT"):
+    for name in (
+        "KAFKA_1_PORT",
+        "KAFKA_2_PORT",
+        "KAFKA_3_PORT",
+        "SCHEMA_REGISTRY_PORT",
+        "MINIO_API_PORT",
+        "ICEBERG_REST_PORT",
+    ):
         monkeypatch.setenv(name, "")
     assert endpoints.bootstrap() == "localhost:9092,localhost:9192,localhost:9292"
     assert endpoints.registry_url() == "http://localhost:8081"

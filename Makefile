@@ -1,7 +1,12 @@
 # STAGE=iceberg switches every compose call to include the Iceberg override.
 ifeq ($(STAGE),iceberg)
 export COMPOSE_FILE := compose.yml:compose.iceberg.yml
+# Iceberg mode reads the record key as Avro too, so the producer must send Avro keys. A value from
+# the command line (make LAB_KEY_SERDE=string ...) or the shell wins over this default.
+LAB_KEY_SERDE ?= avro
 endif
+# Producer key knobs (see `python -m lab.produce --help`). Empty = the producer's own default.
+export LAB_KEY_SERDE LAB_KEY_FIELD
 
 PLUGIN_VERSION := 1.1.1
 PLUGIN_URL     := https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/releases/download/v$(PLUGIN_VERSION)

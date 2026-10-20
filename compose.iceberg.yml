@@ -10,8 +10,10 @@ services:
         aliases:
           - warehouse.minio
 
-  # Test-grade REST catalog. Keeps its table pointers in its own embedded store; restarting this
-  # container can make it forget tables while the Parquet files stay in MinIO.
+  # Test-grade REST catalog. As measured in Task 10, its catalog is a SQLite file in the container's
+  # writable layer: it survives `docker compose restart iceberg-rest`, but is lost when the container
+  # is removed (`make down`), leaving the Parquet files orphaned in the `warehouse` bucket.
+  # Use `make clean` to reset stage 2 (it removes the volumes too).
   iceberg-rest:
     image: apache/iceberg-rest-fixture:1.10.0
     depends_on:
@@ -28,11 +30,13 @@ services:
       CATALOG_S3_ENDPOINT: "http://minio:9000"
 
   # The same Iceberg settings apply to all three brokers (YAML anchor, merged over compose.yml).
+  # The `kafka-tiered` S3 storage settings from compose.yml stay configured but, as measured in
+  # Task 10, receive no objects in Iceberg mode.
   kafka-1: &kafka-iceberg
     depends_on:
       iceberg-rest:
         condition: service_started
-    environment: &kafka-iceberg-env
+    environment:
       KAFKA_RSM_CONFIG_STRUCTURE_PROVIDER_CLASS: "io.aiven.kafka.tieredstorage.iceberg.AvroSchemaRegistryStructureProvider"
       KAFKA_RSM_CONFIG_STRUCTURE_PROVIDER_SERDE_SCHEMA_REGISTRY_URL: "http://karapace:8081"
       KAFKA_RSM_CONFIG_SEGMENT_FORMAT: "iceberg"
@@ -48,8 +52,12 @@ services:
 
   kafka-2:
     <<: *kafka-iceberg
-    environment: *kafka-iceberg-env
 
   kafka-3:
     <<: *kafka-iceberg
-    environment: *kafka-iceberg-env
+
+  # Iceberg mode reads the record key as Avro as well, so the containerised producer defaults to Avro
+  # keys here (make STAGE=iceberg exports the same default). LAB_KEY_SERDE=string would break offload.
+  producer:
+    environment:
+      LAB_KEY_SERDE: "${LAB_KEY_SERDE:-avro}"
