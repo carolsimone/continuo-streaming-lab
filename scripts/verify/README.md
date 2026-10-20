@@ -17,3 +17,13 @@ Run order, from a clean checkout:
 
 The scripts need Docker, `uv`, `curl` and `python3` on the host, the same as the rest of the lab. `lib.sh`
 holds the shared helpers and sets `STAGE=iceberg`.
+
+Stage 2 experiments 6 and 7 (findings: `docs/findings/03-freshness-and-duplicates.md`):
+
+5. `stage2-freshness.sh` is independent: for every case it runs `make clean`, `make up STAGE=iceberg`, recreates the topic
+   with the settings under test and runs `python -m lab.freshness`. `FRESHNESS_REPS` (default 3) sets the repeats; a full
+   run takes about 20 minutes.
+6. `stage2-duplicates.sh` is independent and ends with `make clean`. `DUP_TRIGGER=copying|delay` and `DUP_KILL=0|1` choose
+   when the leader of partition 0 is restarted and whether it is killed (see the header of the script). It uses
+   `python -m lab.pairs`, which compares the table, a replay of the topic and the broker end offsets by
+   `(partition, offset)`.
