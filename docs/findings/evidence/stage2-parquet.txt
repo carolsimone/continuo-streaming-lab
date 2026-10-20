@@ -1,29 +1,29 @@
 ## data files the Iceberg metadata lists (iceberg_metadata of the current metadata file)
 
-$ SQL='SELECT status, content, file_path, file_format, record_count FROM iceberg_metadata('s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json') ORDER BY file_path' make -s query
-2026-10-20 13:22:35,133 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
-{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet", "file_format": "PARQUET", "record_count": 6785}
-{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792495349954-b33741d0-9b2c-464e-a4ff-5445f4fc0a36-00001.parquet", "file_format": "PARQUET", "record_count": 6646}
-{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792495350246-b9897974-628e-4f3f-aca7-d9eb182a4375-00001.parquet", "file_format": "PARQUET", "record_count": 6569}
+$ SQL=SELECT\ status\,\ content\,\ file_path\,\ file_format\,\ record_count\ FROM\ iceberg_metadata\(\'s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json\'\)\ ORDER\ BY\ file_path make -s query
+2026-10-20 13:55:46,279 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet", "file_format": "PARQUET", "record_count": 6569}
+{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792497340998-eed822e3-44f0-400a-9a4b-519291d6fc74-00001.parquet", "file_format": "PARQUET", "record_count": 6646}
+{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792497341262-41e5d7ac-9365-4ff9-a2de-f6dbed9ba051-00001.parquet", "file_format": "PARQUET", "record_count": 6785}
 
 ## the same files read as plain Parquet, ignoring Iceberg: rows and row groups per file
 
-$ SQL='SELECT file_name, num_rows, num_row_groups, created_by FROM parquet_file_metadata('s3://warehouse/default/events/data/*.parquet') ORDER BY file_name' make -s query
-2026-10-20 13:22:35,267 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
-{"file_name": "s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet", "num_rows": 6785, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
-{"file_name": "s3://warehouse/default/events/data/00001-1792495349954-b33741d0-9b2c-464e-a4ff-5445f4fc0a36-00001.parquet", "num_rows": 6646, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
-{"file_name": "s3://warehouse/default/events/data/00001-1792495350246-b9897974-628e-4f3f-aca7-d9eb182a4375-00001.parquet", "num_rows": 6569, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
+$ SQL=SELECT\ file_name\,\ num_rows\,\ num_row_groups\,\ created_by\ FROM\ parquet_file_metadata\(\'s3://warehouse/default/events/data/\*.parquet\'\)\ ORDER\ BY\ file_name make -s query
+2026-10-20 13:55:46,416 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"file_name": "s3://warehouse/default/events/data/00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet", "num_rows": 6569, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
+{"file_name": "s3://warehouse/default/events/data/00001-1792497340998-eed822e3-44f0-400a-9a4b-519291d6fc74-00001.parquet", "num_rows": 6646, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
+{"file_name": "s3://warehouse/default/events/data/00001-1792497341262-41e5d7ac-9365-4ff9-a2de-f6dbed9ba051-00001.parquet", "num_rows": 6785, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
 
 ## total rows over all Parquet files, read as plain Parquet
 
-$ SQL='SELECT count(*) AS rows_in_all_parquet_files FROM read_parquet('s3://warehouse/default/events/data/*.parquet')' make -s query
-2026-10-20 13:22:35,385 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
+$ SQL=SELECT\ count\(\*\)\ AS\ rows_in_all_parquet_files\ FROM\ read_parquet\(\'s3://warehouse/default/events/data/\*.parquet\'\) make -s query
+2026-10-20 13:55:46,541 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
 {"rows_in_all_parquet_files": 20000}
 
-## column schema of one Parquet file (s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet)
+## column schema of one Parquet file (s3://warehouse/default/events/data/00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet)
 
-$ SQL='SELECT name, type, num_children, converted_type, repetition_type FROM parquet_schema('s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet')' make -s query
-2026-10-20 13:22:35,535 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
+$ SQL=SELECT\ name\,\ type\,\ num_children\,\ converted_type\,\ repetition_type\ FROM\ parquet_schema\(\'s3://warehouse/default/events/data/00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet\'\) make -s query
+2026-10-20 13:55:46,661 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
 {"name": "table", "type": null, "num_children": 6, "converted_type": null, "repetition_type": null}
 {"name": "kafka", "type": null, "num_children": 13, "converted_type": null, "repetition_type": "REQUIRED"}
 {"name": "partition", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}

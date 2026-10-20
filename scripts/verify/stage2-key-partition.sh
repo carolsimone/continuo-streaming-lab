@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# (iv) Key to partition, seen through the table. Needs the stack from tests/smoke/04-iceberg.sh (20000 rows,
-# keyed by order_id). Produces a second batch of 20000 events keyed by customer_id (Avro keys), waits for the
-# table to hold all 40000 rows (the open segments upload after the idle roll), then checks that no key spans
-# more than one partition.
+# (iv) Key to partition, seen through the table. Needs the stack left running by tests/smoke/04-iceberg.sh
+# (20000 rows, keyed by order_id). Produces a second batch of 20000 events keyed by customer_id (Avro keys),
+# waits for the table to hold all rows (the open segments upload after the idle roll), then checks that no
+# key spans more than one partition.
 source "$(dirname "$0")/lib.sh"
 
-note "second batch: 20000 events, key = customer_id, Avro keys, order sequence continues at 20000"
-run make batch N=20000 START=20000 LAB_KEY_FIELD=customer_id LAB_KEY_SERDE=avro
+BATCH=20000
+note "rows already in the table (the new batch's order sequence continues after them)"
+query_capture 'SELECT count(*) AS row_count FROM {table}'
+before="$(jget row_count <<<"${QUERY_OUT}")"
 
-wait_for_rows 40000
+note "second batch: ${BATCH} events, key = customer_id, Avro keys, order sequence continues at ${before}"
+run make batch N=${BATCH} START=${before} LAB_KEY_FIELD=customer_id LAB_KEY_SERDE=avro
+
+wait_for_rows $((before + BATCH))
 note "table rows after the second batch"
 query 'SELECT count(*) AS row_count FROM {table}'
 

@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 # (v) Rows per partition and offset coverage in the table, against what the brokers hold.
+# Needs the running stack with all offloaded data (run after stage2-key-partition.sh, or after the smoke test).
 source "$(dirname "$0")/lib.sh"
 
 note "per partition, from the table"
-query 'SELECT kafka.partition, count(*) AS n, min(kafka."offset") AS min_offset, max(kafka."offset") AS max_offset, count(DISTINCT kafka."offset") AS distinct_offsets FROM {table} GROUP BY 1 ORDER BY 1'
+query_capture 'SELECT kafka.partition AS p, count(*) AS n, min(kafka."offset") AS lo, max(kafka."offset") AS hi, count(DISTINCT kafka."offset") AS d FROM {table} GROUP BY 1 ORDER BY 1'
+table="${QUERY_OUT}"
 
 note "per partition, from the broker: end offset (--time -1) and log start offset (--time -2)"
 OFFSETS="docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events"
-run ${OFFSETS} --time -1
-run ${OFFSETS} --time -2
-
-note "comparison: broker end offset against distinct offsets in the table, and offset contiguity"
+echo "\$ ${OFFSETS} --time -1"
 ends="$(${OFFSETS} --time -1 2>/dev/null)"
-table="$(make -s query SQL='SELECT kafka.partition AS p, count(*) AS n, min(kafka."offset") AS lo, max(kafka."offset") AS hi, count(DISTINCT kafka."offset") AS d FROM {table} GROUP BY 1 ORDER BY 1' 2>/dev/null)"
-echo "\$ (join the two outputs above)"
+echo "${ends}"
+echo
+echo "\$ ${OFFSETS} --time -2"
+${OFFSETS} --time -2 2>&1
+echo
+
+note "comparison of the two outputs above: broker end offset against distinct offsets in the table, and offset contiguity"
 ENDS="${ends}" TABLE="${table}" python3 - <<'PY' 2>&1
 import json
 import os

@@ -139,13 +139,16 @@ shows the `warehouse` bucket. The first run needs internet once: DuckDB installs
 `httpfs` extensions.
 
 - Reset with `make clean`, not `make down`. The catalog is a SQLite file inside the `iceberg-rest`
-  container: it survives `docker compose restart iceberg-rest`, but `make down` removes the container,
-  loses the catalog and leaves the Parquet files orphaned in `warehouse`.
+  container (the findings label this an inference: the stored location of that file was seen in an earlier
+  task, not in the committed transcripts). Observed: the table survives `docker compose restart
+  iceberg-rest`, but after `make down` and `make up STAGE=iceberg` the catalog is empty and the Parquet
+  files stay orphaned in `warehouse`.
 - Record keys must be Avro: the plugin reads the key through the schema registry as well. `STAGE=iceberg`
-  makes the producer send Avro keys; string keys make every offload fail with `Unknown magic byte!`.
+  makes the producer send Avro keys; with string keys the brokers logged `Unknown magic byte!` and no
+  table was created in the run recorded in the findings.
 - Rows appear only after a segment is uploaded. The last open segment of each partition uploads after
-  the idle roll, about 40 seconds after the last write, so `make query` reports no table (exit code 3)
-  or fewer rows until then.
+  the idle roll, about 35 to 40 seconds after the last write, so until then `make query` reports no table
+  (the tool exits with status 3, which `make` reports as `Error 3`) or fewer rows.
 - Use the default 1 MiB segments: a producer batch larger than `segment.bytes` is rejected with
   `RECORD_LIST_TOO_LARGE`.
 - Known alpha limits: duplicate rows are possible in principle (the findings count them for this run) and

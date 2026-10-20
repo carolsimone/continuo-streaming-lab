@@ -1,0 +1,45 @@
+## groups by batch_base_offset in partition 0: records, distinct byte offsets, range of byte offsets, offset range
+
+$ SQL=SELECT\ kafka.batch_base_offset\ AS\ base\,\ count\(\*\)\ AS\ records\,\ count\(DISTINCT\ kafka.batch_byte_offset\)\ AS\ distinct_byte_offsets\,\ min\(kafka.batch_byte_offset\)\ AS\ min_byte\,\ max\(kafka.batch_byte_offset\)\ AS\ max_byte\,\ min\(kafka.\"offset\"\)\ AS\ first_offset\,\ max\(kafka.\"offset\"\)\ AS\ last_offset\ FROM\ \{table\}\ WHERE\ kafka.partition\ =\ 0\ GROUP\ BY\ ALL\ ORDER\ BY\ base\ LIMIT\ 8 make -s query
+2026-10-20 13:55:48,067 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"base": 0, "records": 744, "distinct_byte_offsets": 1, "min_byte": 0, "max_byte": 0, "first_offset": 0, "last_offset": 743}
+{"base": 744, "records": 1009, "distinct_byte_offsets": 2, "min_byte": 0, "max_byte": 56885, "first_offset": 744, "last_offset": 1752}
+{"base": 1753, "records": 995, "distinct_byte_offsets": 2, "min_byte": 56885, "max_byte": 134165, "first_offset": 1753, "last_offset": 2747}
+{"base": 2748, "records": 1068, "distinct_byte_offsets": 2, "min_byte": 134165, "max_byte": 210389, "first_offset": 2748, "last_offset": 3815}
+{"base": 3816, "records": 1091, "distinct_byte_offsets": 2, "min_byte": 210389, "max_byte": 292140, "first_offset": 3816, "last_offset": 4906}
+{"base": 4907, "records": 1055, "distinct_byte_offsets": 2, "min_byte": 292140, "max_byte": 375620, "first_offset": 4907, "last_offset": 5961}
+{"base": 5962, "records": 607, "distinct_byte_offsets": 2, "min_byte": 375620, "max_byte": 456431, "first_offset": 5962, "last_offset": 6568}
+
+## the same data grouped by (batch_base_offset, batch_byte_offset): the small groups show where the two fields disagree
+
+$ SQL=SELECT\ kafka.batch_base_offset\ AS\ base\,\ kafka.batch_byte_offset\ AS\ byte\,\ count\(\*\)\ AS\ records\,\ min\(kafka.\"offset\"\)\ AS\ first_offset\,\ max\(kafka.\"offset\"\)\ AS\ last_offset\ FROM\ \{table\}\ WHERE\ kafka.partition\ =\ 0\ GROUP\ BY\ ALL\ ORDER\ BY\ first_offset\ LIMIT\ 10 make -s query
+2026-10-20 13:55:48,197 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"base": 0, "byte": 0, "records": 744, "first_offset": 0, "last_offset": 743}
+{"base": 744, "byte": 0, "records": 1008, "first_offset": 744, "last_offset": 1751}
+{"base": 744, "byte": 56885, "records": 1, "first_offset": 1752, "last_offset": 1752}
+{"base": 1753, "byte": 56885, "records": 994, "first_offset": 1753, "last_offset": 2746}
+{"base": 1753, "byte": 134165, "records": 1, "first_offset": 2747, "last_offset": 2747}
+{"base": 2748, "byte": 134165, "records": 1067, "first_offset": 2748, "last_offset": 3814}
+{"base": 2748, "byte": 210389, "records": 1, "first_offset": 3815, "last_offset": 3815}
+{"base": 3816, "byte": 210389, "records": 1090, "first_offset": 3816, "last_offset": 4905}
+{"base": 3816, "byte": 292140, "records": 1, "first_offset": 4906, "last_offset": 4906}
+{"base": 4907, "byte": 292140, "records": 1054, "first_offset": 4907, "last_offset": 5960}
+
+## how many (partition, batch_base_offset) groups hold more than one batch_byte_offset
+
+$ SQL=SELECT\ count\(\*\)\ AS\ groups\,\ count\(\*\)\ FILTER\ \(WHERE\ n_byte\ \>\ 1\)\ AS\ groups_with_several_byte_offsets\,\ count\(DISTINCT\ p\)\ AS\ partitions\ FROM\ \(SELECT\ kafka.partition\ AS\ p\,\ kafka.batch_base_offset\ AS\ b\,\ count\(DISTINCT\ kafka.batch_byte_offset\)\ AS\ n_byte\ FROM\ \{table\}\ GROUP\ BY\ ALL\) make -s query
+2026-10-20 13:55:48,323 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"groups": 20, "groups_with_several_byte_offsets": 17, "partitions": 3}
+
+## arithmetic under the reading 'the largest batch_byte_offset of a group is where that batch starts': bytes per record
+
+$ SQL=WITH\ g\ AS\ \(SELECT\ kafka.batch_base_offset\ AS\ base\,\ count\(\*\)\ AS\ records\,\ min\(kafka.batch_byte_offset\)\ AS\ min_byte\,\ max\(kafka.batch_byte_offset\)\ AS\ max_byte\ FROM\ \{table\}\ WHERE\ kafka.partition\ =\ 0\ GROUP\ BY\ base\)\ SELECT\ base\,\ records\,\ min_byte\,\ max_byte\,\ lead\(max_byte\)\ OVER\ \(ORDER\ BY\ base\)\ -\ max_byte\ AS\ bytes_to_next_start\,\ round\(\(lead\(max_byte\)\ OVER\ \(ORDER\ BY\ base\)\ -\ max_byte\)\ /\ records\,\ 2\)\ AS\ bytes_per_record\ FROM\ g\ ORDER\ BY\ base\ LIMIT\ 8 make -s query
+2026-10-20 13:55:48,451 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"base": 0, "records": 744, "min_byte": 0, "max_byte": 0, "bytes_to_next_start": 56885, "bytes_per_record": 76.46}
+{"base": 744, "records": 1009, "min_byte": 0, "max_byte": 56885, "bytes_to_next_start": 77280, "bytes_per_record": 76.59}
+{"base": 1753, "records": 995, "min_byte": 56885, "max_byte": 134165, "bytes_to_next_start": 76224, "bytes_per_record": 76.61}
+{"base": 2748, "records": 1068, "min_byte": 134165, "max_byte": 210389, "bytes_to_next_start": 81751, "bytes_per_record": 76.55}
+{"base": 3816, "records": 1091, "min_byte": 210389, "max_byte": 292140, "bytes_to_next_start": 83480, "bytes_per_record": 76.52}
+{"base": 4907, "records": 1055, "min_byte": 292140, "max_byte": 375620, "bytes_to_next_start": 80811, "bytes_per_record": 76.6}
+{"base": 5962, "records": 607, "min_byte": 375620, "max_byte": 456431, "bytes_to_next_start": null, "bytes_per_record": null}
+

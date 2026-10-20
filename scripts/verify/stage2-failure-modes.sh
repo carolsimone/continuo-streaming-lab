@@ -20,10 +20,22 @@ grep 'produced=' <<<"${batch_out}" | tail -1
 echo "number of RECORD_LIST_TOO_LARGE lines: $(grep -c 'RECORD_LIST_TOO_LARGE' <<<"${batch_out}" || true)"
 echo
 
-note "back to the default 1 MiB segments"
-run make topic
+note "A2. the same 262144-byte topic, but a throttled batch (PACE=2000 events per second)"
+batch_out="$(make -s batch N=20000 PACE=2000 2>&1 || true)"
+echo "\$ make -s batch N=20000 PACE=2000   (output captured; final line and error count shown)"
+grep 'produced=' <<<"${batch_out}" | tail -1
+echo "number of RECORD_LIST_TOO_LARGE lines: $(grep -c 'RECORD_LIST_TOO_LARGE' <<<"${batch_out}" || true)"
+echo
 
-note "B. string keys: 2000 events with LAB_KEY_SERDE=string"
+note "reset: the A2 batch carried Avro keys and may have created the table, so B starts from a clean stack with the default 1 MiB topic"
+run make clean
+run make up STAGE=iceberg
+wait_for 120 "Iceberg REST catalog answers" curl -fsS "${REST}/v1/config"
+
+note "B. string keys on the default 1 MiB topic: 2000 events with LAB_KEY_SERDE=string"
+echo "\$ curl -s -o /dev/null -w 'HTTP %{http_code}\\n' ${REST}/v1/namespaces/default/tables/events   (before the batch)"
+curl -s -o /dev/null -w 'HTTP %{http_code}\n' "${REST}/v1/namespaces/default/tables/events"
+echo
 run make batch N=2000 LAB_KEY_SERDE=string
 broker_has_error() {
   local out

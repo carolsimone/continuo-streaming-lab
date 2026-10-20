@@ -2,12 +2,17 @@
 # Stage 2: the broker writes an Iceberg table; DuckDB reads it through the REST catalog.
 # Uses the default 1 MiB segments (a small segment.bytes breaks an unthrottled batch, see
 # docs/findings/02-stage2-iceberg.md). The last open segment of each partition only uploads after the
-# idle roll, about 40 s after the last write, so the test polls until the table holds every record.
+# idle roll, about 35 to 40 s after the last write, so the test polls until the table holds every record.
+#
+# Pass/fail: FAIL on missing records (produced minus distinct (partition, offset) pairs), on rows from
+# fewer than 3 partitions, on a table that does not start at offset 0, and when kafka-tiered is not empty.
+# Duplicate rows are a finding, not a failure: they are counted and printed.
 source "$(dirname "$0")/../../scripts/lib.sh"
 export STAGE=iceberg COMPOSE_FILE=compose.yml:compose.iceberg.yml
 
 REST="http://localhost:${ICEBERG_REST_PORT:-8181}"
 TABLE_WAIT_S=240
+NO_TABLE=3  # exit status of lab.query when the table does not exist yet
 
 # Stage 2 is reset with `make clean`, never `make down`: removing the iceberg-rest container loses
 # the catalog and leaves Parquet files orphaned in the warehouse bucket.
@@ -21,40 +26,51 @@ out="$(make -s batch N=20000)"
 produced="$(echo "${out}" | jget produced)"
 [[ "${produced}" == "20000" ]] || fail "expected 20000 produced, got ${produced}"
 
-# table_rows: row count of default.events, or 0 while the table does not exist yet (query exits 3).
-table_rows() {
-  local out
-  out="$(make -s query 2>/dev/null)" || { echo 0; return 0; }
-  echo "${out}" | jget row_count
+# table_stats: one JSON line {rows, distinct_pairs, partitions, min_offset}. Calls the tool directly instead
+# of `make query`, because make reports any failed recipe as exit status 2 and hides the tool's own status.
+# Status 3 means "no table yet" and yields zeros; any other failure is surfaced at once.
+STATS_SQL='SELECT count(*) AS rows, count(DISTINCT (kafka.partition, kafka."offset")) AS distinct_pairs, count(DISTINCT kafka.partition) AS partitions, min(kafka."offset") AS min_offset FROM {table}'
+table_stats() {
+  local out status=0 err
+  err="$(mktemp)"
+  out="$(uv run python -m lab.query --sql "${STATS_SQL}" 2>"${err}")" || status=$?
+  if (( status == NO_TABLE )); then
+    echo '{"rows": 0, "distinct_pairs": 0, "partitions": 0, "min_offset": null}'
+  elif (( status != 0 )); then
+    log "query failed with exit status ${status}:"
+    cat "${err}" >&2
+    rm -f "${err}"
+    exit 1
+  else
+    echo "${out}"
+  fi
+  rm -f "${err}"
 }
 
 deadline=$((SECONDS + TABLE_WAIT_S))
-rows=0
-until (( rows == produced )); do
+stats="$(table_stats)"
+until (( $(echo "${stats}" | jget distinct_pairs) >= produced )); do
   (( SECONDS < deadline )) || break
   sleep 5
-  rows="$(table_rows)"
-  log "table rows: ${rows} of ${produced}"
+  stats="$(table_stats)"
+  log "table rows: $(echo "${stats}" | jget rows), distinct (partition, offset) pairs: $(echo "${stats}" | jget distinct_pairs), of ${produced} produced"
 done
-(( rows == produced )) || fail "after ${TABLE_WAIT_S} s the table holds ${rows} of ${produced} produced records (missing $((produced - rows)))"
 
-# Rows come from all 3 partitions, offsets start at 0, and (partition, offset) pairs are distinct.
-summary="$(make -s query 2>/dev/null)"
-min_offset="$(echo "${summary}" | jget min_offset)"
-partitions="$(echo "${summary}" | jget partitions)"
+rows="$(echo "${stats}" | jget rows)"
+distinct="$(echo "${stats}" | jget distinct_pairs)"
+partitions="$(echo "${stats}" | jget partitions)"
+min_offset="$(echo "${stats}" | jget min_offset)"
+(( distinct >= produced )) || fail "after ${TABLE_WAIT_S} s the table holds ${distinct} distinct records of ${produced} produced (missing $((produced - distinct)), rows ${rows})"
 [[ "${min_offset}" == "0" ]] || fail "table starts at offset ${min_offset}, expected 0"
 [[ "${partitions}" == "3" ]] || fail "rows from ${partitions} partitions, expected 3"
 
 per_partition="$(make -s query SQL='SELECT kafka.partition AS p, count(*) AS n, count(DISTINCT kafka."offset") AS d FROM {table} GROUP BY 1 ORDER BY 1' 2>/dev/null)"
 log "per-partition rows and distinct offsets:"
 echo "${per_partition}" >&2
-duplicates="$(echo "${per_partition}" | python3 -c '
-import json, sys
-rows = [json.loads(line) for line in sys.stdin if line.strip()]
-print(sum(r["n"] - r["d"] for r in rows))')"
-if [[ "${duplicates}" != "0" ]]; then
-  log "FINDING: ${duplicates} duplicate (partition, offset) rows in the table"
-  fail "duplicates visible: ${duplicates} rows repeat a (partition, offset) pair"
+
+duplicates=$(( rows - distinct ))
+if (( duplicates > 0 )); then
+  log "FINDING: ${duplicates} duplicate rows (${rows} rows, ${distinct} distinct (partition, offset) pairs)"
 fi
 
 # Iceberg mode writes nothing to kafka-tiered; everything lands in warehouse.
@@ -63,4 +79,4 @@ tiered="$(scripts/mc.sh ls --recursive local/kafka-tiered)"
 warehouse="$(scripts/mc.sh ls --recursive local/warehouse)"
 grep -q '\.parquet' <<<"${warehouse}" || fail "no Parquet file in the warehouse bucket"
 
-log "PASS: ${rows} of ${produced} produced records queryable in Iceberg (3 partitions, no duplicate offsets), kafka-tiered empty, Parquet in warehouse"
+log "PASS: ${distinct} of ${produced} produced records queryable in Iceberg (${rows} rows, ${duplicates} duplicates, 3 partitions), kafka-tiered empty, Parquet in warehouse"

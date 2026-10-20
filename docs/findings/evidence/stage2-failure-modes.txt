@@ -7,26 +7,184 @@ $ make up STAGE=iceberg
 docker compose up -d --wait
  Network continuo-streaming-lab_default  Creating
  Network continuo-streaming-lab_default  Created
- Volume continuo-streaming-lab_kafka-1-data  Creating
- Volume continuo-streaming-lab_kafka-1-data  Created
- Volume continuo-streaming-lab_kafka-3-data  Creating
- Volume continuo-streaming-lab_kafka-3-data  Created
- Volume continuo-streaming-lab_kafka-2-data  Creating
- Volume continuo-streaming-lab_kafka-2-data  Created
  Volume continuo-streaming-lab_minio-data  Creating
  Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
  Container continuo-streaming-lab-minio-1  Creating
  Container continuo-streaming-lab-minio-1  Created
  Container continuo-streaming-lab-minio-init-1  Creating
  Container continuo-streaming-lab-minio-init-1  Created
  Container continuo-streaming-lab-iceberg-rest-1  Creating
  Container continuo-streaming-lab-iceberg-rest-1  Created
- Container continuo-streaming-lab-kafka-2-1  Creating
  Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
  Container continuo-streaming-lab-kafka-3-1  Creating
  Container continuo-streaming-lab-kafka-1-1  Created
- Container continuo-streaming-lab-kafka-2-1  Created
  Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+[lab] ok: Iceberg REST catalog answers
+## A. topic with segment.bytes=262144, then an unthrottled batch of 20000 Avro-keyed events
+
+$ env SEGMENT_BYTES=262144 make topic
+scripts/create-topic.sh
+[lab] deleting existing topic events
+[lab] ok: topic events deleted
+Created topic events.
+Topic: events	TopicId: aqmOA2vpSlmexk_xYUL3SA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=262144,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+
+$ make -s batch N=20000   (output captured; errors and the final line shown)
+2026-10-20 14:05:45,142 ERROR __main__: delivery failed: KafkaError{code=RECORD_LIST_TOO_LARGE,val=18,str="Broker: Message batch larger than configured server segment size"}
+2026-10-20 14:05:45,143 ERROR __main__: delivery failed: KafkaError{code=RECORD_LIST_TOO_LARGE,val=18,str="Broker: Message batch larger than configured server segment size"}
+2026-10-20 14:05:45,143 ERROR __main__: delivery failed: KafkaError{code=RECORD_LIST_TOO_LARGE,val=18,str="Broker: Message batch larger than configured server segment size"}
+2026-10-20 14:05:45,379 INFO __main__: produced=0 failed=20000
+number of RECORD_LIST_TOO_LARGE lines: 20000
+
+## A2. the same 262144-byte topic, but a throttled batch (PACE=2000 events per second)
+
+$ make -s batch N=20000 PACE=2000   (output captured; final line and error count shown)
+2026-10-20 14:06:00,237 INFO __main__: produced=20000 failed=0
+number of RECORD_LIST_TOO_LARGE lines: 0
+
+## reset: the A2 batch carried Avro keys and may have created the table, so B starts from a clean stack with the default 1 MiB topic
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
  Container continuo-streaming-lab-topic-init-1  Creating
  Container continuo-streaming-lab-topic-init-1  Created
  Container continuo-streaming-lab-karapace-1  Creating
@@ -46,100 +204,76 @@ docker compose up -d --wait
  Container continuo-streaming-lab-minio-init-1  Waiting
  Container continuo-streaming-lab-minio-init-1  Exited
  Container continuo-streaming-lab-minio-init-1  Exited
- Container continuo-streaming-lab-minio-init-1  Exited
- Container continuo-streaming-lab-kafka-3-1  Starting
  Container continuo-streaming-lab-kafka-2-1  Starting
  Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
  Container continuo-streaming-lab-kafka-1-1  Started
  Container continuo-streaming-lab-kafka-2-1  Started
  Container continuo-streaming-lab-kafka-3-1  Started
- Container continuo-streaming-lab-kafka-1-1  Waiting
  Container continuo-streaming-lab-kafka-2-1  Waiting
  Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
  Container continuo-streaming-lab-kafka-1-1  Healthy
- Container continuo-streaming-lab-kafka-3-1  Healthy
  Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
  Container continuo-streaming-lab-topic-init-1  Starting
  Container continuo-streaming-lab-topic-init-1  Started
- Container continuo-streaming-lab-kafka-3-1  Waiting
- Container continuo-streaming-lab-topic-init-1  Waiting
  Container continuo-streaming-lab-kafka-1-1  Waiting
  Container continuo-streaming-lab-kafka-2-1  Waiting
- Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
  Container continuo-streaming-lab-kafka-1-1  Healthy
  Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
  Container continuo-streaming-lab-topic-init-1  Exited
  Container continuo-streaming-lab-karapace-1  Starting
  Container continuo-streaming-lab-karapace-1  Started
- Container continuo-streaming-lab-karapace-1  Waiting
- Container continuo-streaming-lab-minio-1  Waiting
  Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
  Container continuo-streaming-lab-minio-init-1  Waiting
- Container continuo-streaming-lab-kafka-2-1  Waiting
  Container continuo-streaming-lab-topic-init-1  Waiting
  Container continuo-streaming-lab-kafka-3-1  Waiting
- Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
  Container continuo-streaming-lab-minio-init-1  Exited
- Container continuo-streaming-lab-minio-1  Healthy
  Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
  Container continuo-streaming-lab-topic-init-1  Exited
  Container continuo-streaming-lab-iceberg-rest-1  Healthy
- Container continuo-streaming-lab-kafka-2-1  Healthy
- Container continuo-streaming-lab-kafka-1-1  Healthy
  Container continuo-streaming-lab-karapace-1  Healthy
 
 [lab] ok: Iceberg REST catalog answers
-## A. topic with segment.bytes=262144, then an unthrottled batch of 20000 Avro-keyed events
+## B. string keys on the default 1 MiB topic: 2000 events with LAB_KEY_SERDE=string
 
-$ env SEGMENT_BYTES=262144 make topic
-scripts/create-topic.sh
-[lab] deleting existing topic events
-[lab] ok: topic events deleted
-Created topic events.
-Topic: events	TopicId: U2u2ZBo_TTeaC6xDXQHDMw	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=262144,retention.ms=-1
-	Topic: events	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
-	Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
-	Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 
-
-$ make -s batch N=20000   (output captured; errors and the final line shown)
-2026-10-20 13:19:17,618 ERROR __main__: delivery failed: KafkaError{code=RECORD_LIST_TOO_LARGE,val=18,str="Broker: Message batch larger than configured server segment size"}
-2026-10-20 13:19:17,618 ERROR __main__: delivery failed: KafkaError{code=RECORD_LIST_TOO_LARGE,val=18,str="Broker: Message batch larger than configured server segment size"}
-2026-10-20 13:19:17,618 ERROR __main__: delivery failed: KafkaError{code=RECORD_LIST_TOO_LARGE,val=18,str="Broker: Message batch larger than configured server segment size"}
-2026-10-20 13:19:17,664 INFO __main__: produced=13215 failed=6785
-number of RECORD_LIST_TOO_LARGE lines: 6785
-
-## back to the default 1 MiB segments
-
-$ make topic
-scripts/create-topic.sh
-[lab] deleting existing topic events
-[lab] ok: topic events deleted
-Created topic events.
-Topic: events	TopicId: Utmihj-tS8SgtHHF1VrYXg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
-	Topic: events	Partition: 0	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
-	Topic: events	Partition: 1	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 
-	Topic: events	Partition: 2	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
-
-## B. string keys: 2000 events with LAB_KEY_SERDE=string
+$ curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:8181/v1/namespaces/default/tables/events   (before the batch)
+HTTP 404
 
 $ make batch N=2000 LAB_KEY_SERDE=string
 uv run python -m lab.produce --count 2000 --rate 0 \
 	  --schema-version v1 --start-seq 0
-2026-10-20 13:19:22,940 INFO httpx2: HTTP Request: GET http://localhost:8081/subjects?deleted=false&deleted_only=false&offset=0&limit=-1 "HTTP/1.1 200 OK"
-2026-10-20 13:19:22,954 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=value "HTTP/1.1 404 Not Found"
-2026-10-20 13:19:22,955 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-value/versions?normalize=False "HTTP/1.1 200 OK"
-%3|1792495163.001|FAIL|rdkafka#producer-1| [thrd:localhost:9092/1]: localhost:9092/1: Connect to ipv6#[::1]:9092 failed: Connection refused (after 0ms in state CONNECT)
-2026-10-20 13:19:23,228 INFO __main__: produced=2000 failed=0
+2026-10-20 14:06:34,842 INFO httpx2: HTTP Request: GET http://localhost:8081/subjects?deleted=false&deleted_only=false&offset=0&limit=-1 "HTTP/1.1 200 OK"
+%3|1792497994.850|FAIL|rdkafka#producer-1| [thrd:localhost:9292/bootstrap]: localhost:9292/bootstrap: Connect to ipv6#[::1]:9292 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792497995.351|FAIL|rdkafka#producer-1| [thrd:localhost:9092/bootstrap]: localhost:9092/bootstrap: Connect to ipv6#[::1]:9092 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792497995.852|FAIL|rdkafka#producer-1| [thrd:localhost:9192/bootstrap]: localhost:9192/bootstrap: Connect to ipv6#[::1]:9192 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792497995.908|FAIL|rdkafka#producer-1| [thrd:localhost:9192/bootstrap]: localhost:9192/bootstrap: Connect to ipv6#[::1]:9192 failed: Connection refused (after 0ms in state CONNECT)
+%3|1792497996.354|FAIL|rdkafka#producer-1| [thrd:localhost:9092/bootstrap]: localhost:9092/bootstrap: Connect to ipv6#[::1]:9092 failed: Connection refused (after 1ms in state CONNECT)
+2026-10-20 14:06:36,861 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=value "HTTP/1.1 404 Not Found"
+2026-10-20 14:06:37,549 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-value/versions?normalize=False "HTTP/1.1 200 OK"
+2026-10-20 14:06:37,594 INFO __main__: produced=2000 failed=0
 {"produced": 2000, "failed": 0, "first_seq": 0, "last_seq": 1999}
 
 [lab] ok: a broker logs 'Unknown magic byte' (the open segment uploads after the idle roll)
 $ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -m6 -E 'Unknown magic byte|Error deserializing|Failed to'
-kafka-2-1  | org.apache.kafka.server.log.remote.storage.RemoteStorageException: org.apache.kafka.common.errors.SerializationException: Error deserializing schema ID
-kafka-2-1  | Caused by: org.apache.kafka.common.errors.SerializationException: Error deserializing schema ID
-kafka-2-1  | Caused by: java.lang.IllegalArgumentException: Unknown magic byte!
 kafka-3-1  | org.apache.kafka.server.log.remote.storage.RemoteStorageException: org.apache.kafka.common.errors.SerializationException: Error deserializing schema ID
 kafka-3-1  | Caused by: org.apache.kafka.common.errors.SerializationException: Error deserializing schema ID
 kafka-3-1  | Caused by: java.lang.IllegalArgumentException: Unknown magic byte!
+kafka-1-1  | org.apache.kafka.server.log.remote.storage.RemoteStorageException: org.apache.kafka.common.errors.SerializationException: Error deserializing schema ID
+kafka-2-1  | org.apache.kafka.server.log.remote.storage.RemoteStorageException: org.apache.kafka.common.errors.SerializationException: Error deserializing schema ID
+kafka-2-1  | Caused by: org.apache.kafka.common.errors.SerializationException: Error deserializing schema ID
 
 ## no table was created
 
@@ -165,15 +299,15 @@ docker compose --profile producer down --volumes --remove-orphans
  Container continuo-streaming-lab-topic-init-1  Stopped
  Container continuo-streaming-lab-topic-init-1  Removing
  Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopping
  Container continuo-streaming-lab-kafka-1-1  Stopping
  Container continuo-streaming-lab-kafka-3-1  Stopping
- Container continuo-streaming-lab-kafka-2-1  Stopping
- Container continuo-streaming-lab-kafka-2-1  Stopped
- Container continuo-streaming-lab-kafka-2-1  Removing
  Container continuo-streaming-lab-kafka-1-1  Stopped
  Container continuo-streaming-lab-kafka-1-1  Removing
- Container continuo-streaming-lab-kafka-2-1  Removed
  Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
  Container continuo-streaming-lab-kafka-3-1  Stopped
  Container continuo-streaming-lab-kafka-3-1  Removing
  Container continuo-streaming-lab-kafka-3-1  Removed
@@ -189,14 +323,14 @@ docker compose --profile producer down --volumes --remove-orphans
  Container continuo-streaming-lab-minio-1  Stopped
  Container continuo-streaming-lab-minio-1  Removing
  Container continuo-streaming-lab-minio-1  Removed
- Volume continuo-streaming-lab_kafka-2-data  Removing
  Volume continuo-streaming-lab_kafka-3-data  Removing
  Volume continuo-streaming-lab_kafka-1-data  Removing
  Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
  Network continuo-streaming-lab_default  Removing
- Volume continuo-streaming-lab_kafka-2-data  Removed
  Volume continuo-streaming-lab_kafka-3-data  Removed
  Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
  Volume continuo-streaming-lab_minio-data  Removed
  Network continuo-streaming-lab_default  Removed
 

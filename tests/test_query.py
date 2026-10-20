@@ -89,7 +89,9 @@ def test_unexpected_catalog_response_exits_1_and_says_so(capsys):
     assert "cannot reach" not in captured.err
 
 
-def test_parse_args_defaults():
+def test_parse_args_defaults(monkeypatch):
+    monkeypatch.delenv("ICEBERG_REST_PORT", raising=False)  # a port set in the developer's shell must not leak in
+    monkeypatch.delenv("MINIO_API_PORT", raising=False)
     args = parse_args([])
     assert args.rest == "http://localhost:8181"
     assert args.minio == "localhost:9000"

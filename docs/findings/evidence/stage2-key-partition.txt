@@ -1,18 +1,22 @@
+## rows already in the table (the new batch's order sequence continues after them)
+
+$ SQL=SELECT\ count\(\*\)\ AS\ row_count\ FROM\ \{table\} make -s query
+2026-10-20 13:55:48,594 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"row_count": 20000}
+
 ## second batch: 20000 events, key = customer_id, Avro keys, order sequence continues at 20000
 
 $ make batch N=20000 START=20000 LAB_KEY_FIELD=customer_id LAB_KEY_SERDE=avro
 uv run python -m lab.produce --count 20000 --rate 0 \
 	  --schema-version v1 --start-seq 20000
-2026-10-20 13:22:36,742 INFO httpx2: HTTP Request: GET http://localhost:8081/subjects?deleted=false&deleted_only=false&offset=0&limit=-1 "HTTP/1.1 200 OK"
-%3|1792495356.753|FAIL|rdkafka#producer-1| [thrd:localhost:9192/bootstrap]: localhost:9192/bootstrap: Connect to ipv6#[::1]:9192 failed: Connection refused (after 0ms in state CONNECT)
-%3|1792495357.257|FAIL|rdkafka#producer-1| [thrd:localhost:9292/bootstrap]: localhost:9292/bootstrap: Connect to ipv6#[::1]:9292 failed: Connection refused (after 0ms in state CONNECT)
-2026-10-20 13:22:37,765 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=key "HTTP/1.1 404 Not Found"
-2026-10-20 13:22:37,768 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-key/versions?normalize=False "HTTP/1.1 200 OK"
-2026-10-20 13:22:37,770 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=value "HTTP/1.1 404 Not Found"
-2026-10-20 13:22:37,772 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-value/versions?normalize=False "HTTP/1.1 200 OK"
-%3|1792495357.819|FAIL|rdkafka#producer-1| [thrd:localhost:9292/3]: localhost:9292/3: Connect to ipv6#[::1]:9292 failed: Connection refused (after 0ms in state CONNECT)
-%3|1792495357.819|FAIL|rdkafka#producer-1| [thrd:localhost:9092/1]: localhost:9092/1: Connect to ipv6#[::1]:9092 failed: Connection refused (after 0ms in state CONNECT)
-2026-10-20 13:22:38,099 INFO __main__: produced=20000 failed=0
+2026-10-20 13:55:48,801 INFO httpx2: HTTP Request: GET http://localhost:8081/subjects?deleted=false&deleted_only=false&offset=0&limit=-1 "HTTP/1.1 200 OK"
+%3|1792497348.811|FAIL|rdkafka#producer-1| [thrd:localhost:9292/bootstrap]: localhost:9292/bootstrap: Connect to ipv6#[::1]:9292 failed: Connection refused (after 0ms in state CONNECT)
+2026-10-20 13:55:49,318 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=key "HTTP/1.1 404 Not Found"
+2026-10-20 13:55:49,320 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-key/versions?normalize=False "HTTP/1.1 200 OK"
+2026-10-20 13:55:49,321 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=value "HTTP/1.1 404 Not Found"
+2026-10-20 13:55:49,323 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-value/versions?normalize=False "HTTP/1.1 200 OK"
+%3|1792497349.369|FAIL|rdkafka#producer-1| [thrd:localhost:9292/3]: localhost:9292/3: Connect to ipv6#[::1]:9292 failed: Connection refused (after 0ms in state CONNECT)
+2026-10-20 13:55:49,652 INFO __main__: produced=20000 failed=0
 {"produced": 20000, "failed": 0, "first_seq": 20000, "last_seq": 39999}
 
 [lab] table rows: 20000 of 40000
@@ -21,39 +25,39 @@ uv run python -m lab.produce --count 20000 --rate 0 \
 [lab] table rows: 20000 of 40000
 [lab] table rows: 20000 of 40000
 [lab] table rows: 20000 of 40000
-[lab] table rows: 33273 of 40000
+[lab] table rows: 20000 of 40000
 [lab] table rows: 40000 of 40000
 ## table rows after the second batch
 
-$ SQL='SELECT count(*) AS row_count FROM {table}' make -s query
-2026-10-20 13:23:19,623 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+$ SQL=SELECT\ count\(\*\)\ AS\ row_count\ FROM\ \{table\} make -s query
+2026-10-20 13:56:31,174 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
 {"row_count": 40000}
 
 ## keys that appear in more than one partition (expected: none)
 
-$ SQL='SELECT key, count(DISTINCT kafka.partition) AS partitions, count(*) AS n FROM {table} GROUP BY key HAVING count(DISTINCT kafka.partition) > 1' make -s query
-2026-10-20 13:23:19,747 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+$ SQL=SELECT\ key\,\ count\(DISTINCT\ kafka.partition\)\ AS\ partitions\,\ count\(\*\)\ AS\ n\ FROM\ \{table\}\ GROUP\ BY\ key\ HAVING\ count\(DISTINCT\ kafka.partition\)\ \>\ 1 make -s query
+2026-10-20 13:56:31,296 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
 
 ## the same check restricted to the customer_id keys of the second batch (keys starting with c-)
 
-$ SQL='SELECT count(*) AS keys_in_more_than_one_partition FROM (SELECT key FROM {table} WHERE key LIKE 'c-%' GROUP BY key HAVING count(DISTINCT kafka.partition) > 1)' make -s query
-2026-10-20 13:23:19,879 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+$ SQL=SELECT\ count\(\*\)\ AS\ keys_in_more_than_one_partition\ FROM\ \(SELECT\ key\ FROM\ \{table\}\ WHERE\ key\ LIKE\ \'c-%\'\ GROUP\ BY\ key\ HAVING\ count\(DISTINCT\ kafka.partition\)\ \>\ 1\) make -s query
+2026-10-20 13:56:31,426 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
 {"keys_in_more_than_one_partition": 0}
 
 ## how many distinct keys, and how many records carry each kind of key
 
-$ SQL='SELECT count(DISTINCT key) AS distinct_customer_keys, count(*) AS records_with_customer_key FROM {table} WHERE key LIKE 'c-%'' make -s query
-2026-10-20 13:23:20,009 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+$ SQL=SELECT\ count\(DISTINCT\ key\)\ AS\ distinct_customer_keys\,\ count\(\*\)\ AS\ records_with_customer_key\ FROM\ \{table\}\ WHERE\ key\ LIKE\ \'c-%\' make -s query
+2026-10-20 13:56:31,557 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
 {"distinct_customer_keys": 500, "records_with_customer_key": 20000}
 
-$ SQL='SELECT count(DISTINCT key) AS distinct_order_keys, count(*) AS records_with_order_key FROM {table} WHERE key LIKE 'o-%'' make -s query
-2026-10-20 13:23:20,135 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+$ SQL=SELECT\ count\(DISTINCT\ key\)\ AS\ distinct_order_keys\,\ count\(\*\)\ AS\ records_with_order_key\ FROM\ \{table\}\ WHERE\ key\ LIKE\ \'o-%\' make -s query
+2026-10-20 13:56:31,680 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
 {"distinct_order_keys": 20000, "records_with_order_key": 20000}
 
 ## top 5 customer keys by record count, with the partitions they live in
 
-$ SQL='SELECT key, count(*) AS n, list_sort(list(DISTINCT kafka.partition)) AS partitions FROM {table} WHERE key LIKE 'c-%' GROUP BY key ORDER BY n DESC, key LIMIT 5' make -s query
-2026-10-20 13:23:20,263 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+$ SQL=SELECT\ key\,\ count\(\*\)\ AS\ n\,\ list_sort\(list\(DISTINCT\ kafka.partition\)\)\ AS\ partitions\ FROM\ \{table\}\ WHERE\ key\ LIKE\ \'c-%\'\ GROUP\ BY\ key\ ORDER\ BY\ n\ DESC\,\ key\ LIMIT\ 5 make -s query
+2026-10-20 13:56:31,807 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
 {"key": "c-0001", "n": 59, "partitions": [0]}
 {"key": "c-0187", "n": 59, "partitions": [0]}
 {"key": "c-0081", "n": 58, "partitions": [0]}
@@ -62,8 +66,8 @@ $ SQL='SELECT key, count(*) AS n, list_sort(list(DISTINCT kafka.partition)) AS p
 
 ## customer keys per partition (how the c- keys spread over the 3 partitions)
 
-$ SQL='SELECT kafka.partition, count(DISTINCT key) AS customer_keys, count(*) AS records FROM {table} WHERE key LIKE 'c-%' GROUP BY 1 ORDER BY 1' make -s query
-2026-10-20 13:23:20,390 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+$ SQL=SELECT\ kafka.partition\,\ count\(DISTINCT\ key\)\ AS\ customer_keys\,\ count\(\*\)\ AS\ records\ FROM\ \{table\}\ WHERE\ key\ LIKE\ \'c-%\'\ GROUP\ BY\ 1\ ORDER\ BY\ 1 make -s query
+2026-10-20 13:56:31,933 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
 {"partition": 0, "customer_keys": 151, "records": 6066}
 {"partition": 1, "customer_keys": 169, "records": 6727}
 {"partition": 2, "customer_keys": 180, "records": 7207}
