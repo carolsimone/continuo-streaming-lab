@@ -35,7 +35,7 @@ echo "\$ curl -s -w '\\nHTTP %{http_code}\\n' ${REST}/v1/namespaces/default/tabl
 curl -s -w '\nHTTP %{http_code}\n' "${REST}/v1/namespaces/default/tables/events"; echo
 query 'SELECT count(*) AS row_count FROM {table}'
 
-note "the Parquet files are still in the warehouse bucket (orphaned: nothing points at them)"
+note "the Parquet files are still in the warehouse bucket (orphaned: nothing in the catalog points at them; the metadata and manifests left in warehouse still reference them)"
 run scripts/mc.sh ls --recursive local/warehouse/default/events/data
 run scripts/mc.sh du local/warehouse
 

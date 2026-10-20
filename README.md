@@ -135,7 +135,7 @@ make query
 the metadata, the manifests and the Parquet files directly from MinIO. With no argument it prints one
 JSON line (row count, partitions, offset range). Pass SQL with `make query SQL='...'` and write the
 table as `{table}`; on the make command line a literal dollar sign must be written `$$`. `make ls-minio`
-shows the `warehouse` bucket. The first run needs internet once: DuckDB installs its `iceberg` and
+lists both buckets (`kafka-tiered`, empty in this mode, and `warehouse`). The first run needs internet once: DuckDB installs its `iceberg` and
 `httpfs` extensions.
 
 - Reset with `make clean`, not `make down`. The catalog is a SQLite file inside the `iceberg-rest`
@@ -144,7 +144,7 @@ shows the `warehouse` bucket. The first run needs internet once: DuckDB installs
   iceberg-rest`, but after `make down` and `make up STAGE=iceberg` the catalog is empty and the Parquet
   files stay orphaned in `warehouse`.
 - Record keys must be Avro: the plugin reads the key through the schema registry as well. `STAGE=iceberg`
-  makes the producer send Avro keys; with string keys the brokers logged `Unknown magic byte!` and no
+  makes the producer send Avro keys; with string keys the brokers logged `Error deserializing schema ID` / `Unknown magic byte!` and no
   table was created in the run recorded in the findings.
 - Rows appear only after a segment is uploaded. The last open segment of each partition uploads after
   the idle roll, about 35 to 40 seconds after the last write, so until then `make query` reports no table

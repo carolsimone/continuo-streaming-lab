@@ -20,7 +20,7 @@ query() {
   echo "\$ SQL=$(printf '%q' "$1") make -s query"  # %q: the printed line can be copied and re-run
   local rc=0
   SQL="$1" make -s query 2>&1 || rc=$?
-  (( rc == 0 )) || echo "(exit code ${rc}; make reports the tool's exit status 3 as 2)"
+  (( rc == 0 )) || echo "(exit code ${rc})"
   echo
 }
 
@@ -33,7 +33,7 @@ query_capture() {
   cat "${err}"
   rm -f "${err}"
   echo "${QUERY_OUT}"
-  (( rc == 0 )) || echo "(exit code ${rc}; make reports the tool's exit status 3 as 2)"
+  (( rc == 0 )) || echo "(exit code ${rc})"
   echo
 }
 

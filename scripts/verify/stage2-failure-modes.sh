@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Two ways stage 2 fails, reproduced once each on a clean stack (it runs make clean and make up itself):
 # A. a producer batch larger than segment.bytes is rejected by the broker (RECORD_LIST_TOO_LARGE);
-# B. string keys: the plugin reads the record key as Avro, so offload fails with "Unknown magic byte!"
-#    and no table is created.
+# B. string keys: the plugin reads the record key as Avro; in the recorded run the brokers logged
+#    "Error deserializing schema ID" / "Unknown magic byte!" and no table was created.
 source "$(dirname "$0")/lib.sh"
 
 note "start from a clean stage 2 stack"

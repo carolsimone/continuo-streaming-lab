@@ -64,7 +64,7 @@ min_offset="$(echo "${stats}" | jget min_offset)"
 [[ "${min_offset}" == "0" ]] || fail "table starts at offset ${min_offset}, expected 0"
 [[ "${partitions}" == "3" ]] || fail "rows from ${partitions} partitions, expected 3"
 
-per_partition="$(make -s query SQL='SELECT kafka.partition AS p, count(*) AS n, count(DISTINCT kafka."offset") AS d FROM {table} GROUP BY 1 ORDER BY 1' 2>/dev/null)"
+per_partition="$(make -s query SQL='SELECT kafka.partition AS p, count(*) AS n, count(DISTINCT kafka."offset") AS d FROM {table} GROUP BY 1 ORDER BY 1')" || fail "per-partition query failed (see the error above)"
 log "per-partition rows and distinct offsets:"
 echo "${per_partition}" >&2
 
