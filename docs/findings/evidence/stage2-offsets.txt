@@ -1,0 +1,28 @@
+## per partition, from the table
+
+$ SQL='SELECT kafka.partition, count(*) AS n, min(kafka."offset") AS min_offset, max(kafka."offset") AS max_offset, count(DISTINCT kafka."offset") AS distinct_offsets FROM {table} GROUP BY 1 ORDER BY 1' make -s query
+2026-10-20 13:23:20,530 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-66628a65-12ac-4aa3-8a7c-ec801683e3ed.metadata.json
+{"partition": 0, "n": 12635, "min_offset": 0, "max_offset": 12634, "distinct_offsets": 12635}
+{"partition": 1, "n": 13512, "min_offset": 0, "max_offset": 13511, "distinct_offsets": 13512}
+{"partition": 2, "n": 13853, "min_offset": 0, "max_offset": 13852, "distinct_offsets": 13853}
+
+## per partition, from the broker: end offset (--time -1) and log start offset (--time -2)
+
+$ docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events --time -1
+events:0:12635
+events:1:13512
+events:2:13853
+
+$ docker compose exec -T kafka-1 /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events --time -2
+events:0:0
+events:1:0
+events:2:0
+
+## comparison: broker end offset against distinct offsets in the table, and offset contiguity
+
+$ (join the two outputs above)
+partition 0: broker end offset 12635, table rows 12635, distinct offsets 12635, min 0, max 12634, missing 0, duplicate rows 0, contiguous True
+partition 1: broker end offset 13512, table rows 13512, distinct offsets 13512, min 0, max 13511, missing 0, duplicate rows 0, contiguous True
+partition 2: broker end offset 13853, table rows 13853, distinct offsets 13853, min 0, max 13852, missing 0, duplicate rows 0, contiguous True
+total: missing 0, duplicate rows 0, broker records 40000
+

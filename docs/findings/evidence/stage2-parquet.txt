@@ -1,0 +1,57 @@
+## data files the Iceberg metadata lists (iceberg_metadata of the current metadata file)
+
+$ SQL='SELECT status, content, file_path, file_format, record_count FROM iceberg_metadata('s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json') ORDER BY file_path' make -s query
+2026-10-20 13:22:35,133 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
+{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet", "file_format": "PARQUET", "record_count": 6785}
+{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792495349954-b33741d0-9b2c-464e-a4ff-5445f4fc0a36-00001.parquet", "file_format": "PARQUET", "record_count": 6646}
+{"status": "ADDED", "content": "EXISTING", "file_path": "s3://warehouse/default/events/data/00001-1792495350246-b9897974-628e-4f3f-aca7-d9eb182a4375-00001.parquet", "file_format": "PARQUET", "record_count": 6569}
+
+## the same files read as plain Parquet, ignoring Iceberg: rows and row groups per file
+
+$ SQL='SELECT file_name, num_rows, num_row_groups, created_by FROM parquet_file_metadata('s3://warehouse/default/events/data/*.parquet') ORDER BY file_name' make -s query
+2026-10-20 13:22:35,267 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
+{"file_name": "s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet", "num_rows": 6785, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
+{"file_name": "s3://warehouse/default/events/data/00001-1792495349954-b33741d0-9b2c-464e-a4ff-5445f4fc0a36-00001.parquet", "num_rows": 6646, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
+{"file_name": "s3://warehouse/default/events/data/00001-1792495350246-b9897974-628e-4f3f-aca7-d9eb182a4375-00001.parquet", "num_rows": 6569, "num_row_groups": 1, "created_by": "parquet-mr version 1.16.0 (build 402c3810c372d29603e181771acebfecc71bef61)"}
+
+## total rows over all Parquet files, read as plain Parquet
+
+$ SQL='SELECT count(*) AS rows_in_all_parquet_files FROM read_parquet('s3://warehouse/default/events/data/*.parquet')' make -s query
+2026-10-20 13:22:35,385 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
+{"rows_in_all_parquet_files": 20000}
+
+## column schema of one Parquet file (s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet)
+
+$ SQL='SELECT name, type, num_children, converted_type, repetition_type FROM parquet_schema('s3://warehouse/default/events/data/00001-1792495349678-a411cdf4-0ce2-4d85-8a65-43b054e5858b-00001.parquet')' make -s query
+2026-10-20 13:22:35,535 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
+{"name": "table", "type": null, "num_children": 6, "converted_type": null, "repetition_type": null}
+{"name": "kafka", "type": null, "num_children": 13, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "partition", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "offset", "type": "INT64", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "timestamp", "type": "INT64", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_byte_offset", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_base_offset", "type": "INT64", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_partition_leader_epoch", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_magic", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_timestamp_type", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_compression_type", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_max_timestamp", "type": "INT64", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_producer_id", "type": "INT64", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_producer_epoch", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "batch_base_sequence", "type": "INT32", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "headers", "type": null, "num_children": 1, "converted_type": "LIST", "repetition_type": "REQUIRED"}
+{"name": "list", "type": null, "num_children": 1, "converted_type": null, "repetition_type": "REPEATED"}
+{"name": "element", "type": null, "num_children": 2, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "key", "type": "BYTE_ARRAY", "num_children": null, "converted_type": "UTF8", "repetition_type": "REQUIRED"}
+{"name": "value", "type": "BYTE_ARRAY", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "key", "type": "BYTE_ARRAY", "num_children": null, "converted_type": "UTF8", "repetition_type": "OPTIONAL"}
+{"name": "key_raw", "type": "BYTE_ARRAY", "num_children": null, "converted_type": null, "repetition_type": "OPTIONAL"}
+{"name": "value", "type": null, "num_children": 6, "converted_type": null, "repetition_type": "OPTIONAL"}
+{"name": "order_id", "type": "BYTE_ARRAY", "num_children": null, "converted_type": "UTF8", "repetition_type": "REQUIRED"}
+{"name": "customer_id", "type": "BYTE_ARRAY", "num_children": null, "converted_type": "UTF8", "repetition_type": "REQUIRED"}
+{"name": "event_type", "type": "BYTE_ARRAY", "num_children": null, "converted_type": "UTF8", "repetition_type": "REQUIRED"}
+{"name": "amount_cents", "type": "INT64", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "currency", "type": "BYTE_ARRAY", "num_children": null, "converted_type": "UTF8", "repetition_type": "REQUIRED"}
+{"name": "event_ts_ms", "type": "INT64", "num_children": null, "converted_type": null, "repetition_type": "REQUIRED"}
+{"name": "value_raw", "type": "BYTE_ARRAY", "num_children": null, "converted_type": null, "repetition_type": "OPTIONAL"}
+

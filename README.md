@@ -3,9 +3,8 @@
 A local lab for Kafka tiered storage with Aiven's plugin, landing stream data in MinIO as raw
 segments (stage 1) and as Iceberg tables you can query with DuckDB (stage 2).
 
-Status: stage 1 (plain tiered storage on a 3-broker cluster, with a leader-failover experiment) is
-done and documented below. Stage 2 (Iceberg mode and DuckDB) is not part of this stage and is not
-described here; `STAGE=iceberg` in the Makefile points at a compose file that does not exist yet.
+Status: stage 1 (plain tiered storage on a 3-broker cluster, with a leader-failover experiment) and
+stage 2 (the broker writes an Iceberg table that DuckDB queries) are done and documented below.
 Credentials in this repo (`minioadmin`/`minioadmin`) are demo values for a local stack.
 
 License: Apache-2.0.
@@ -59,10 +58,10 @@ passed, only the new, empty active segment per partition remains (`0` bytes) on 
 ```bash
 make ls-minio
 ```
-Lists the objects in the `kafka-tiered` bucket, per partition, with the total size at the end (it
-reads `0 objects` until the first segment is uploaded). Each
-uploaded segment shows up as a `.log` (segment data), an `.indexes` object and an `.rsm-manifest`
-object.
+Lists the objects in both buckets, each under its own heading, with the total size at the end of
+each: `kafka-tiered` (stage 1 segments, per partition; it reads `0 objects` until the first segment is
+uploaded) and `warehouse` (stage 2 Iceberg table; empty in stage 1). Each uploaded stage 1 segment
+shows up as a `.log` (segment data), an `.indexes` object and an `.rsm-manifest` object.
 
 ```bash
 make replay
@@ -98,10 +97,10 @@ Shows which broker uploaded which segment (the lines the plugin's copy task logs
 make clean
 ```
 Removes the containers and all their data (this compose project's volumes only).
-`make down` stops the containers but keeps the data.
+`make down` stops the containers but keeps the data (in stage 2 it still loses the Iceberg catalog, see below).
 
 MinIO console: <http://localhost:9001>, user `minioadmin`, password `minioadmin` (demo values for
-this local stack, not for anything real). The bucket is `kafka-tiered`.
+this local stack, not for anything real). Stage 1 writes to the `kafka-tiered` bucket, stage 2 to `warehouse`.
 
 ### How it works
 
@@ -119,3 +118,39 @@ served by the plugin from the bucket, through that partition's leader.
   showed, with the evidence it is based on, and the surprises along the way.
 - [docs/findings/01b-leader-failover.md](docs/findings/01b-leader-failover.md): what happens to
   offload and replay when the leader of a partition is stopped.
+
+## Stage 2: Iceberg table, queried with DuckDB
+
+In Iceberg mode the Aiven plugin does not copy raw segments. It converts each uploaded segment to
+Parquet and commits it to an Iceberg table (`default.events`) in the `warehouse` bucket, through an
+Iceberg REST catalog. Nothing is written to `kafka-tiered`.
+
+```bash
+make clean && make up STAGE=iceberg
+make batch N=20000 STAGE=iceberg
+make query
+```
+
+`make query` asks the REST catalog only where the table's current metadata file is; DuckDB then reads
+the metadata, the manifests and the Parquet files directly from MinIO. With no argument it prints one
+JSON line (row count, partitions, offset range). Pass SQL with `make query SQL='...'` and write the
+table as `{table}`; on the make command line a literal dollar sign must be written `$$`. `make ls-minio`
+shows the `warehouse` bucket. The first run needs internet once: DuckDB installs its `iceberg` and
+`httpfs` extensions.
+
+- Reset with `make clean`, not `make down`. The catalog is a SQLite file inside the `iceberg-rest`
+  container: it survives `docker compose restart iceberg-rest`, but `make down` removes the container,
+  loses the catalog and leaves the Parquet files orphaned in `warehouse`.
+- Record keys must be Avro: the plugin reads the key through the schema registry as well. `STAGE=iceberg`
+  makes the producer send Avro keys; string keys make every offload fail with `Unknown magic byte!`.
+- Rows appear only after a segment is uploaded. The last open segment of each partition uploads after
+  the idle roll, about 40 seconds after the last write, so `make query` reports no table (exit code 3)
+  or fewer rows until then.
+- Use the default 1 MiB segments: a producer batch larger than `segment.bytes` is rejected with
+  `RECORD_LIST_TOO_LARGE`.
+- Known alpha limits: duplicate rows are possible in principle (the findings count them for this run) and
+  schema evolution is not supported.
+
+Findings, with the evidence they are based on: [docs/findings/02-stage2-iceberg.md](docs/findings/02-stage2-iceberg.md).
+The scripts that produced the evidence are in `scripts/verify/`; the end-to-end check is
+`tests/smoke/04-iceberg.sh`.

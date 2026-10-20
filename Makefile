@@ -96,8 +96,9 @@ topic: ## (Re)create the tiered events topic (PARTITIONS, REPLICATION_FACTOR, SE
 topic-describe: ## Leader, replicas and in-sync replicas per partition (VIA=n asks broker n, default 1)
 	$(COMPOSE) exec kafka-$(or $(VIA),1) $(KAFKA_TOPICS) --describe --topic events
 
-ls-minio: ## List tiered objects in MinIO (per partition)
-	@$(MC) 'mc alias set l http://minio:9000 minioadmin minioadmin >/dev/null && mc ls -r l/kafka-tiered; mc du l/kafka-tiered'
+ls-minio: ## List both buckets in MinIO: kafka-tiered (stage 1 segments) and warehouse (stage 2 Iceberg table)
+	@$(MC) 'mc alias set l http://minio:9000 minioadmin minioadmin >/dev/null; \
+	  for b in kafka-tiered warehouse; do echo "== $$b"; mc ls -r l/$$b; mc du l/$$b; done'
 
 ls-local: ## List the segments each broker still holds on its own disk
 	@for n in 1 2 3; do \

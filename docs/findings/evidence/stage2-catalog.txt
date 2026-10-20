@@ -1,0 +1,87 @@
+## namespaces
+
+$ curl -s http://localhost:8181/v1/namespaces
+{"namespaces":[["default"]],"next-page-token":null}
+
+## catalog config
+
+$ curl -s http://localhost:8181/v1/config
+{"defaults":{},"overrides":{},"endpoints":["POST v1/oauth/tokens","POST https://auth-server.com/token","GET v1/config","GET /v1/{prefix}/namespaces","POST /v1/{prefix}/namespaces","HEAD /v1/{prefix}/namespaces/{namespace}","GET /v1/{prefix}/namespaces/{namespace}","DELETE /v1/{prefix}/namespaces/{namespace}","POST /v1/{prefix}/namespaces/{namespace}/properties","GET /v1/{prefix}/namespaces/{namespace}/tables","POST /v1/{prefix}/namespaces/{namespace}/tables","HEAD /v1/{prefix}/namespaces/{namespace}/tables/{table}","GET /v1/{prefix}/namespaces/{namespace}/tables/{table}","POST /v1/{prefix}/namespaces/{namespace}/register","POST /v1/{prefix}/namespaces/{namespace}/tables/{table}","DELETE /v1/{prefix}/namespaces/{namespace}/tables/{table}","POST /v1/{prefix}/tables/rename","POST /v1/{prefix}/namespaces/{namespace}/tables/{table}/metrics","POST /v1/{prefix}/transactions/commit","GET /v1/{prefix}/namespaces/{namespace}/views","HEAD /v1/{prefix}/namespaces/{namespace}/views/{view}","GET /v1/{prefix}/namespaces/{namespace}/views/{view}","POST /v1/{prefix}/namespaces/{namespace}/views","POST /v1/{prefix}/namespaces/{namespace}/views/{view}","POST /v1/{prefix}/views/rename","DELETE /v1/{prefix}/namespaces/{namespace}/views/{view}"]}
+
+## the table, first 60 lines of the pretty-printed answer
+
+$ curl -s http://localhost:8181/v1/namespaces/default/tables/events | python3 -m json.tool | head -60
+{
+    "metadata-location": "s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json",
+    "metadata": {
+        "format-version": 2,
+        "table-uuid": "320916fc-8967-4c2d-a2d6-8ba0da9a5dac",
+        "location": "s3://warehouse/default/events",
+        "last-sequence-number": 6,
+        "last-updated-ms": 1792495350873,
+        "last-column-id": 28,
+        "current-schema-id": 0,
+        "schemas": [
+            {
+                "type": "struct",
+                "schema-id": 0,
+                "fields": [
+                    {
+                        "id": 1,
+                        "name": "kafka",
+                        "required": true,
+                        "type": {
+                            "type": "struct",
+                            "fields": [
+                                {
+                                    "id": 7,
+                                    "name": "partition",
+                                    "required": true,
+                                    "type": "int"
+                                },
+                                {
+                                    "id": 8,
+                                    "name": "offset",
+                                    "required": true,
+                                    "type": "long"
+                                },
+                                {
+                                    "id": 9,
+                                    "name": "timestamp",
+                                    "required": true,
+                                    "type": "long"
+                                },
+                                {
+                                    "id": 10,
+                                    "name": "batch_byte_offset",
+                                    "required": true,
+                                    "type": "int"
+                                },
+                                {
+                                    "id": 11,
+                                    "name": "batch_base_offset",
+                                    "required": true,
+                                    "type": "long"
+                                },
+                                {
+                                    "id": 12,
+                                    "name": "batch_partition_leader_epoch",
+                                    "required": true,
+                                    "type": "int"
+                                },
+                                {
+                                    "id": 13,
+
+## metadata-location and snapshot summaries from the same answer
+
+$ curl -s http://localhost:8181/v1/namespaces/default/tables/events | python3 (print metadata-location, current-snapshot-id, every snapshot summary)
+metadata-location: s3://warehouse/default/events/metadata/00006-c3a11d6c-5fe0-4bc5-bfb8-bb4eac19bdac.metadata.json
+table location: s3://warehouse/default/events
+current-snapshot-id: 8296218850032720393
+snapshot 6320375343278089340 append added-records=None total-records=0 added-data-files=None total-data-files=0 manifest-list=s3://warehouse/default/events/metadata/snap-6320375343278089340-1-ed274698-2377-4338-8653-b0d08d0a8e59.avro
+snapshot 1921059314796715688 append added-records=None total-records=0 added-data-files=None total-data-files=0 manifest-list=s3://warehouse/default/events/metadata/snap-1921059314796715688-2-344d495f-18fe-45ce-b724-b1bec46cd968.avro
+snapshot 557235503030363486 append added-records=None total-records=0 added-data-files=None total-data-files=0 manifest-list=s3://warehouse/default/events/metadata/snap-557235503030363486-3-2f197b40-c74e-4049-a7ff-828d0d52a9bf.avro
+snapshot 7410392576271492746 append added-records=6785 total-records=6785 added-data-files=1 total-data-files=1 manifest-list=s3://warehouse/default/events/metadata/snap-7410392576271492746-1-63b596a2-24a1-4093-b10f-4a6af464540f.avro
+snapshot 987740478376628665 append added-records=6646 total-records=13431 added-data-files=1 total-data-files=2 manifest-list=s3://warehouse/default/events/metadata/snap-987740478376628665-1-516fbc9c-c12b-42d0-ba69-b2d21f06e865.avro
+snapshot 8296218850032720393 append added-records=6569 total-records=20000 added-data-files=1 total-data-files=3 manifest-list=s3://warehouse/default/events/metadata/snap-8296218850032720393-1-9cd36ee9-c7f2-49a7-9319-fe94aefcdc02.avro
+

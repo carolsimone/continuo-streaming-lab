@@ -1,0 +1,103 @@
+docker compose --profile producer down --volumes --remove-orphans
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+[lab] ok: Iceberg REST catalog answers at http://localhost:8181/v1/config
+2026-10-20 13:21:54,847 INFO httpx2: HTTP Request: GET http://localhost:8081/subjects?deleted=false&deleted_only=false&offset=0&limit=-1 "HTTP/1.1 200 OK"
+2026-10-20 13:21:54,860 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=key "HTTP/1.1 404 Not Found"
+2026-10-20 13:21:55,589 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-key/versions?normalize=False "HTTP/1.1 200 OK"
+2026-10-20 13:21:55,592 INFO httpx2: HTTP Request: GET http://localhost:8081/associations/resources/4L6g3nShT-eMCtK--X86sw/events?resourceType=topic&associationType=value "HTTP/1.1 404 Not Found"
+2026-10-20 13:21:55,597 INFO httpx2: HTTP Request: POST http://localhost:8081/subjects/events-value/versions?normalize=False "HTTP/1.1 200 OK"
+2026-10-20 13:21:55,739 INFO __main__: produced=20000 failed=0
+[lab] table rows: 0 of 20000
+[lab] table rows: 0 of 20000
+[lab] table rows: 0 of 20000
+[lab] table rows: 0 of 20000
+[lab] table rows: 0 of 20000
+[lab] table rows: 0 of 20000
+[lab] table rows: 20000 of 20000
+[lab] per-partition rows and distinct offsets:
+{"p": 0, "n": 6569, "d": 6569}
+{"p": 1, "n": 6785, "d": 6785}
+{"p": 2, "n": 6646, "d": 6646}
+[lab] PASS: 20000 of 20000 produced records queryable in Iceberg (3 partitions, no duplicate offsets), kafka-tiered empty, Parquet in warehouse
