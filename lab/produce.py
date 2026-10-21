@@ -52,7 +52,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=os.environ.get("LAB_KEY_FIELD") or "order_id",
         help="event field used as record key; customer_id repeats across events [env LAB_KEY_FIELD]",
     )
+    p.add_argument(
+        "--batch-num-messages",
+        type=int,
+        default=int(os.environ["LAB_BATCH_NUM_MESSAGES"]) if os.environ.get("LAB_BATCH_NUM_MESSAGES") else None,
+        help="librdkafka batch.num.messages, the most records per producer batch; unset = librdkafka's default "
+        "(1 = one record per batch) [env LAB_BATCH_NUM_MESSAGES]",
+    )
     args = p.parse_args(argv)
+    if args.batch_num_messages is not None and args.batch_num_messages < 1:
+        p.error(f"invalid --batch-num-messages: {args.batch_num_messages} (must be at least 1)")
     for name, allowed in (("key_serde", KEY_SERDES), ("key_field", KEY_FIELDS)):
         if getattr(args, name) not in allowed:  # argparse does not check choices for a default
             p.error(f"invalid --{name.replace('_', '-')}: {getattr(args, name)!r} (choose from {', '.join(allowed)})")
@@ -60,7 +69,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def build_producer(
-    bootstrap: str, registry_url: str, schema_str: str, key_serde: str = "string"
+    bootstrap: str, registry_url: str, schema_str: str, key_serde: str = "string", batch_num_messages: int | None = None
 ) -> SerializingProducer:
     registry = SchemaRegistryClient({"url": registry_url})
     registry.get_subjects()  # preflight: fail fast if Karapace is unreachable
@@ -69,15 +78,16 @@ def build_producer(
         key_serializer = AvroSerializer(registry, KEY_SCHEMA_STR)
     else:
         key_serializer = StringSerializer("utf_8")
-    return SerializingProducer(
-        {
-            "bootstrap.servers": bootstrap,
-            "key.serializer": key_serializer,
-            "value.serializer": AvroSerializer(registry, schema_str),
-            "linger.ms": 20,
-            "enable.idempotence": True,  # retries must not duplicate records (matters during leader failover)
-        }
-    )
+    conf = {
+        "bootstrap.servers": bootstrap,
+        "key.serializer": key_serializer,
+        "value.serializer": AvroSerializer(registry, schema_str),
+        "linger.ms": 20,
+        "enable.idempotence": True,  # retries must not duplicate records (matters during leader failover)
+    }
+    if batch_num_messages is not None:
+        conf["batch.num.messages"] = batch_num_messages
+    return SerializingProducer(conf)
 
 
 def send(
@@ -107,7 +117,9 @@ def send(
 def run(args: argparse.Namespace, stop: threading.Event) -> dict:
     """Send events until `args.count` is reached (0 = unbounded) or `stop` is set, then flush."""
     schema_str = load_schema(args.schema_version)
-    producer = build_producer(args.bootstrap, args.registry, schema_str, args.key_serde)
+    producer = build_producer(
+        args.bootstrap, args.registry, schema_str, args.key_serde, batch_num_messages=args.batch_num_messages
+    )
     rng = random.Random(args.seed)
     counts = {"produced": 0, "failed": 0}
 

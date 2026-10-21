@@ -6,7 +6,7 @@ export COMPOSE_FILE := compose.yml:compose.iceberg.yml
 LAB_KEY_SERDE ?= avro
 endif
 # Producer key knobs (see `python -m lab.produce --help`). Empty = the producer's own default.
-export LAB_KEY_SERDE LAB_KEY_FIELD
+export LAB_KEY_SERDE LAB_KEY_FIELD LAB_BATCH_NUM_MESSAGES
 
 PLUGIN_VERSION := 1.1.1
 PLUGIN_URL     := https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/releases/download/v$(PLUGIN_VERSION)

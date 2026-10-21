@@ -293,7 +293,7 @@ def test_run_keys_events_by_customer_id_and_customer_keys_repeat(monkeypatch):
 def test_run_passes_key_serde_to_build_producer(monkeypatch):
     seen = {}
 
-    def fake_build(bootstrap, registry, schema_str, key_serde="string"):
+    def fake_build(bootstrap, registry, schema_str, key_serde="string", **kwargs):
         seen["key_serde"] = key_serde
         return FakeProducer()
 
@@ -339,3 +339,57 @@ def test_build_producer_avro_key_serde_registers_a_string_key_schema(monkeypatch
     assert captured["key.serializer"] == ("avro", '{"type": "string"}')
     assert captured["value.serializer"] == ("avro", '{"type": "record"}')
     assert serializers == ['{"type": "string"}', '{"type": "record"}']
+
+
+def test_batch_num_messages_default_is_unset(monkeypatch):
+    monkeypatch.delenv("LAB_BATCH_NUM_MESSAGES", raising=False)
+    assert parse_args([]).batch_num_messages is None
+
+
+def test_batch_num_messages_from_flag_and_environment(monkeypatch):
+    monkeypatch.setenv("LAB_BATCH_NUM_MESSAGES", "1")
+    assert parse_args([]).batch_num_messages == 1
+    assert parse_args(["--batch-num-messages", "7"]).batch_num_messages == 7
+
+
+def test_batch_num_messages_must_be_positive():
+    with pytest.raises(SystemExit):
+        parse_args(["--batch-num-messages", "0"])
+
+
+def test_build_producer_leaves_batch_num_messages_to_librdkafka_by_default(monkeypatch):
+    captured, _ = _build_with_fakes(monkeypatch, "string")
+    assert "batch.num.messages" not in captured
+
+
+def test_build_producer_sets_batch_num_messages_when_given(monkeypatch):
+    captured = {}
+
+    class FakeRegistry:
+        def __init__(self, conf):
+            pass
+
+        def get_subjects(self):
+            return []
+
+    class FakeSerializingProducer:
+        def __init__(self, conf):
+            captured.update(conf)
+
+    monkeypatch.setattr(produce, "SchemaRegistryClient", FakeRegistry)
+    monkeypatch.setattr(produce, "AvroSerializer", lambda registry, schema: object())
+    monkeypatch.setattr(produce, "SerializingProducer", FakeSerializingProducer)
+    produce.build_producer("localhost:9092", "http://localhost:8081", "{}", batch_num_messages=1)
+    assert captured["batch.num.messages"] == 1
+
+
+def test_run_passes_batch_num_messages_to_build_producer(monkeypatch):
+    seen = {}
+
+    def fake_build(bootstrap, registry, schema_str, key_serde="string", batch_num_messages=None):
+        seen["batch_num_messages"] = batch_num_messages
+        return FakeProducer()
+
+    monkeypatch.setattr(produce, "build_producer", fake_build)
+    produce.run(parse_args(["--count", "1", "--batch-num-messages", "1"]), threading.Event())
+    assert seen["batch_num_messages"] == 1
