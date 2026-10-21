@@ -155,5 +155,10 @@ lists both buckets (`kafka-tiered`, empty in this mode, and `warehouse`). The fi
   schema evolution is not supported.
 
 Findings, with the evidence they are based on: [docs/findings/02-stage2-iceberg.md](docs/findings/02-stage2-iceberg.md). Freshness and leader-restart results (including that in Iceberg mode, with plugin 1.1.1, in the tested runs, the broker served tiered history under wrong offsets when a segment held several producer batches and a rebuilt batch started at the last record of one that held more than one record (Kafka 4.0.0, uncompressed, one producer), confirmed with Kafka's own tools and raw Fetch requests): [docs/findings/03-freshness-and-duplicates.md](docs/findings/03-freshness-and-duplicates.md).
+Upstream status, checked 2026-10-21: another user had already reported "Consuming from Iceberg topic results in incorrect
+behaviour" on the same plugin and Kafka versions ([#762](https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/issues/762)), and
+a fix ([#775](https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/pull/775) "Fix consumer infinite loop") is
+merged on the plugin's `main` but in no release; this lab runs v1.1.1 as released and did not test `main` (findings 03,
+"Upstream status").
 The scripts that produced the evidence are in `scripts/verify/`; the end-to-end check is
 `tests/smoke/04-iceberg.sh`.
