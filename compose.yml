@@ -227,6 +227,9 @@ services:
         condition: service_completed_successfully
     restart: "no"
     stop_grace_period: 15s
+    environment:
+      LAB_KEY_SERDE: "${LAB_KEY_SERDE:-}" # string (default) or avro; make STAGE=iceberg sets avro
+      LAB_KEY_FIELD: "${LAB_KEY_FIELD:-}" # order_id (default) or customer_id
     # Runs `python -m lab.produce`. Inside Compose it uses the in-network addresses, not the host ports.
     command:
       - --count

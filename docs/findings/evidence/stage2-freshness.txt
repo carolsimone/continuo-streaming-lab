@@ -1,0 +1,2092 @@
+## case seg5000, run 1 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=5000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: LJn3Vur7QAyywO8FpJaCtA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=5000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=5000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=5000}
+
+$ uv run python -m lab.freshness --segment-ms 5000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:17:59,537 INFO __main__: marker marker-196db7bd produced at 2026-10-20T13:17:59.537Z (partition 1, offset 0); waiting for it to become queryable
+2026-10-20 15:18:13,024 INFO __main__: queryable after 13.49 s (segment.ms=5000)
+{"seconds_to_queryable": 13.49, "segment_ms": 5000, "filler_interval": 1.0, "filler_sent": 14, "marker": "marker-196db7bd", "marker_partition": 1, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:17:59.537Z", "queryable_seen_utc": "2026-10-20T13:18:13.024Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-2-1  | [2026-10-20 13:18:05,681] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 1 ms.
+kafka-2-1  | [2026-10-20 13:18:06,694] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 1 ms.
+kafka-1-1  | [2026-10-20 13:18:05,680] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 1 ms.
+kafka-2-1  | [2026-10-20 13:18:10,884] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 1 in 1 ms.
+kafka-2-1  | [2026-10-20 13:18:11,674] INFO [RemoteLogManager=2 partition=LJn3Vur7QAyywO8FpJaCtA:events-1] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:18:06,692] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 0 ms.
+kafka-2-1  | [2026-10-20 13:18:11,947] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 5 in 1 ms.
+kafka-1-1  | [2026-10-20 13:18:10,886] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 1 in 1 ms.
+kafka-1-1  | [2026-10-20 13:18:11,675] INFO [RemoteLogManager=1 partition=LJn3Vur7QAyywO8FpJaCtA:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:18:11,945] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 5 in 0 ms.
+kafka-1-1  | [2026-10-20 13:18:12,590] INFO [RemoteLogManager=1 partition=LJn3Vur7QAyywO8FpJaCtA:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 13:18:12,901] INFO [RemoteLogManager=2 partition=LJn3Vur7QAyywO8FpJaCtA:events-1] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-3-1  | [2026-10-20 13:18:05,676] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 1 ms.
+kafka-3-1  | [2026-10-20 13:18:06,567] INFO [RemoteLogManager=3 partition=LJn3Vur7QAyywO8FpJaCtA:events-2] Copying 00000000000000000000.log to remote storage.
+kafka-3-1  | [2026-10-20 13:18:06,694] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 0 ms.
+kafka-3-1  | [2026-10-20 13:18:07,973] INFO [RemoteLogManager=3 partition=LJn3Vur7QAyywO8FpJaCtA:events-2] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-3-1  | [2026-10-20 13:18:10,886] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 1 in 1 ms.
+kafka-3-1  | [2026-10-20 13:18:11,948] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 5 in 0 ms.
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-1 (offset 0); Rolled new log segment: +11.3 s; Copying: +12.1 s; Copied: +13.4 s; marker row seen: +13.49 s
+
+## case seg15000, run 1 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=15000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: GrvKaqHBSmaPfToe_7gR8Q	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=15000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=15000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=15000}
+
+$ uv run python -m lab.freshness --segment-ms 15000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:18:57,613 INFO __main__: marker marker-2033ac3f produced at 2026-10-20T13:18:57.613Z (partition 2, offset 0); waiting for it to become queryable
+2026-10-20 15:19:18,463 INFO __main__: queryable after 20.86 s (segment.ms=15000)
+{"seconds_to_queryable": 20.86, "segment_ms": 15000, "filler_interval": 1.0, "filler_sent": 21, "marker": "marker-2033ac3f", "marker_partition": 2, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:18:57.613Z", "queryable_seen_utc": "2026-10-20T13:19:18.463Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-3-1  | [2026-10-20 13:19:14,332] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 7 in 1 ms.
+kafka-3-1  | [2026-10-20 13:19:15,350] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 6 in 1 ms.
+kafka-2-1  | [2026-10-20 13:19:14,332] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 7 in 1 ms.
+kafka-2-1  | [2026-10-20 13:19:15,347] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 6 in 0 ms.
+kafka-2-1  | [2026-10-20 13:19:16,808] INFO [RemoteLogManager=2 partition=GrvKaqHBSmaPfToe_7gR8Q:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-2-1  | [2026-10-20 13:19:18,259] INFO [RemoteLogManager=2 partition=GrvKaqHBSmaPfToe_7gR8Q:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-1-1  | [2026-10-20 13:19:14,328] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 7 in 0 ms.
+kafka-1-1  | [2026-10-20 13:19:15,350] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 6 in 0 ms.
+kafka-1-1  | [2026-10-20 13:19:16,995] INFO [RemoteLogManager=1 partition=GrvKaqHBSmaPfToe_7gR8Q:events-2] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:19:18,492] INFO [RemoteLogManager=1 partition=GrvKaqHBSmaPfToe_7gR8Q:events-2] Copied 00000000000000000000.log to remote storage with segment-id: ...
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-2 (offset 0); Rolled new log segment: +16.7 s; Copying: +19.4 s; Copied: +20.9 s; marker row seen: +20.86 s
+
+## case seg60000, run 1 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=60000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: zOoqVCGFRJGlUwJTOQktHg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=60000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=60000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=60000}
+
+$ uv run python -m lab.freshness --segment-ms 60000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:20:00,475 INFO __main__: marker marker-600df624 produced at 2026-10-20T13:20:00.474Z (partition 1, offset 0); waiting for it to become queryable
+2026-10-20 15:21:04,767 INFO __main__: queryable after 64.29 s (segment.ms=60000)
+{"seconds_to_queryable": 64.29, "segment_ms": 60000, "filler_interval": 1.0, "filler_sent": 64, "marker": "marker-600df624", "marker_partition": 1, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:20:00.474Z", "queryable_seen_utc": "2026-10-20T13:21:04.767Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-3-1  | [2026-10-20 13:21:01,643] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 16 in 1 ms.
+kafka-3-1  | [2026-10-20 13:21:02,245] INFO [RemoteLogManager=3 partition=zOoqVCGFRJGlUwJTOQktHg:events-1] Copying 00000000000000000000.log to remote storage.
+kafka-3-1  | [2026-10-20 13:21:02,661] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 1 ms.
+kafka-3-1  | [2026-10-20 13:21:03,909] INFO [RemoteLogManager=3 partition=zOoqVCGFRJGlUwJTOQktHg:events-1] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-1-1  | [2026-10-20 13:21:01,647] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 16 in 0 ms.
+kafka-1-1  | [2026-10-20 13:21:02,662] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 0 ms.
+kafka-2-1  | [2026-10-20 13:21:01,647] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 16 in 0 ms.
+kafka-2-1  | [2026-10-20 13:21:02,657] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 0 ms.
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-1 (offset 0); Rolled new log segment: +61.2 s; Copying: +61.8 s; Copied: +63.4 s; marker row seen: +64.29 s
+
+## case control, run 1 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: 6RKobWXOQlCCkEuhU3-MUg	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=1048576 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=1048576, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=604800000 sensitive=false synonyms={}
+
+$ uv run python -m lab.freshness --segment-ms 0 --filler-interval 0 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:21:47,177 INFO __main__: marker marker-8ceea1cd produced at 2026-10-20T13:21:47.176Z (partition 2, offset 0); waiting for it to become queryable
+2026-10-20 15:22:21,406 INFO __main__: queryable after 34.23 s (segment.ms=0)
+{"seconds_to_queryable": 34.23, "segment_ms": 0, "filler_interval": 0.0, "filler_sent": 0, "marker": "marker-8ceea1cd", "marker_partition": 2, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:21:47.176Z", "queryable_seen_utc": "2026-10-20T13:22:21.406Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-2-1  | [2026-10-20 13:22:17,471] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 1 in 1 ms.
+kafka-2-1  | [2026-10-20 13:22:19,012] INFO [RemoteLogManager=2 partition=6RKobWXOQlCCkEuhU3-MUg:events-2] Copying 00000000000000000000.log to remote storage.
+kafka-2-1  | [2026-10-20 13:22:20,397] INFO [RemoteLogManager=2 partition=6RKobWXOQlCCkEuhU3-MUg:events-2] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-1-1  | [2026-10-20 13:22:17,501] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 1 in 0 ms.
+kafka-3-1  | [2026-10-20 13:22:17,516] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 1 in 0 ms.
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-2 (offset 0); Rolled new log segment: +30.3 s; Copying: +31.8 s; Copied: +33.2 s; marker row seen: +34.23 s
+
+## case seg5000, run 2 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=5000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: t18jnHS4SZ2cTK2S-GMCDQ	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=5000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=5000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=5000}
+
+$ uv run python -m lab.freshness --segment-ms 5000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:23:05,766 INFO __main__: marker marker-7be273f8 produced at 2026-10-20T13:23:05.766Z (partition 0, offset 0); waiting for it to become queryable
+2026-10-20 15:23:13,003 INFO __main__: queryable after 7.24 s (segment.ms=5000)
+{"seconds_to_queryable": 7.24, "segment_ms": 5000, "filler_interval": 1.0, "filler_sent": 8, "marker": "marker-7be273f8", "marker_partition": 0, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:23:05.766Z", "queryable_seen_utc": "2026-10-20T13:23:13.003Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-1-1  | [2026-10-20 13:23:10,885] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 1 ms.
+kafka-1-1  | [2026-10-20 13:23:10,889] INFO [RemoteLogManager=1 partition=t18jnHS4SZ2cTK2S-GMCDQ:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:23:11,907] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 0 ms.
+kafka-1-1  | [2026-10-20 13:23:12,668] INFO [RemoteLogManager=1 partition=t18jnHS4SZ2cTK2S-GMCDQ:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 13:23:10,889] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 0 ms.
+kafka-2-1  | [2026-10-20 13:23:11,904] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 0 ms.
+kafka-3-1  | [2026-10-20 13:23:10,889] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 1 ms.
+kafka-3-1  | [2026-10-20 13:23:11,899] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 0 ms.
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-0 (offset 0); Rolled new log segment: +5.1 s; Copying: +5.1 s; Copied: +6.9 s; marker row seen: +7.24 s
+
+## case seg15000, run 2 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=15000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: ijEN5SYQQp2_saPXmKDL-w	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=15000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=15000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=15000}
+
+$ uv run python -m lab.freshness --segment-ms 15000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:23:55,969 INFO __main__: marker marker-0182e9ad produced at 2026-10-20T13:23:55.969Z (partition 0, offset 0); waiting for it to become queryable
+2026-10-20 15:24:18,733 INFO __main__: queryable after 22.76 s (segment.ms=15000)
+{"seconds_to_queryable": 22.76, "segment_ms": 15000, "filler_interval": 1.0, "filler_sent": 23, "marker": "marker-0182e9ad", "marker_partition": 0, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:23:55.969Z", "queryable_seen_utc": "2026-10-20T13:24:18.733Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-1-1  | [2026-10-20 13:24:12,413] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 6 in 0 ms.
+kafka-1-1  | [2026-10-20 13:24:12,651] INFO [RemoteLogManager=1 partition=ijEN5SYQQp2_saPXmKDL-w:events-2] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:24:13,431] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 7 in 1 ms.
+kafka-1-1  | [2026-10-20 13:24:13,997] INFO [RemoteLogManager=1 partition=ijEN5SYQQp2_saPXmKDL-w:events-2] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-3-1  | [2026-10-20 13:24:12,416] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 6 in 1 ms.
+kafka-3-1  | [2026-10-20 13:24:13,431] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 7 in 1 ms.
+kafka-2-1  | [2026-10-20 13:24:12,417] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 6 in 0 ms.
+kafka-2-1  | [2026-10-20 13:24:13,429] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 7 in 1 ms.
+kafka-2-1  | [2026-10-20 13:24:17,621] INFO [RemoteLogManager=2 partition=ijEN5SYQQp2_saPXmKDL-w:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-2-1  | [2026-10-20 13:24:18,378] INFO [RemoteLogManager=2 partition=ijEN5SYQQp2_saPXmKDL-w:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-0 (offset 0); Rolled new log segment: +17.5 s; Copying: +21.7 s; Copied: +22.4 s; marker row seen: +22.76 s
+
+## case seg60000, run 2 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=60000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: Ogri4VOuSDu3MMnoyaEkvA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=60000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=60000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=60000}
+
+$ uv run python -m lab.freshness --segment-ms 60000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:25:01,087 INFO __main__: marker marker-9ae3ef3d produced at 2026-10-20T13:25:01.087Z (partition 2, offset 0); waiting for it to become queryable
+2026-10-20 15:26:13,360 INFO __main__: queryable after 72.27 s (segment.ms=60000)
+{"seconds_to_queryable": 72.27, "segment_ms": 60000, "filler_interval": 1.0, "filler_sent": 72, "marker": "marker-9ae3ef3d", "marker_partition": 2, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:25:01.087Z", "queryable_seen_utc": "2026-10-20T13:26:13.360Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-1-1  | [2026-10-20 13:26:02,955] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 0 ms.
+kafka-1-1  | [2026-10-20 13:26:12,287] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 21 in 0 ms.
+kafka-1-1  | [2026-10-20 13:26:12,334] INFO [RemoteLogManager=1 partition=Ogri4VOuSDu3MMnoyaEkvA:events-2] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:26:13,161] INFO [RemoteLogManager=1 partition=Ogri4VOuSDu3MMnoyaEkvA:events-2] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-3-1  | [2026-10-20 13:26:02,955] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 0 ms.
+kafka-3-1  | [2026-10-20 13:26:12,289] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 21 in 0 ms.
+kafka-2-1  | [2026-10-20 13:26:02,950] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 1 ms.
+kafka-2-1  | [2026-10-20 13:26:07,332] INFO [RemoteLogManager=2 partition=Ogri4VOuSDu3MMnoyaEkvA:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-2-1  | [2026-10-20 13:26:08,897] INFO [RemoteLogManager=2 partition=Ogri4VOuSDu3MMnoyaEkvA:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-2-1  | [2026-10-20 13:26:12,289] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 21 in 0 ms.
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-2 (offset 0); Rolled new log segment: +71.2 s; Copying: +71.2 s; Copied: +72.1 s; marker row seen: +72.27 s
+
+## case control, run 2 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: V9js6VOQRLKiRLgMYTOucQ	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=1048576 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=1048576, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=604800000 sensitive=false synonyms={}
+
+$ uv run python -m lab.freshness --segment-ms 0 --filler-interval 0 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:26:54,199 INFO __main__: marker marker-01eb469e produced at 2026-10-20T13:26:54.199Z (partition 0, offset 0); waiting for it to become queryable
+2026-10-20 15:27:32,402 INFO __main__: queryable after 38.2 s (segment.ms=0)
+{"seconds_to_queryable": 38.2, "segment_ms": 0, "filler_interval": 0.0, "filler_sent": 0, "marker": "marker-01eb469e", "marker_partition": 0, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:26:54.199Z", "queryable_seen_utc": "2026-10-20T13:27:32.402Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-1-1  | [2026-10-20 13:27:26,092] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 1 in 1 ms.
+kafka-1-1  | [2026-10-20 13:27:31,089] INFO [RemoteLogManager=1 partition=V9js6VOQRLKiRLgMYTOucQ:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:27:32,416] INFO [RemoteLogManager=1 partition=V9js6VOQRLKiRLgMYTOucQ:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-3-1  | [2026-10-20 13:27:26,095] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 1 in 1 ms.
+kafka-2-1  | [2026-10-20 13:27:26,056] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 1 in 0 ms.
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-0 (offset 0); Rolled new log segment: +31.9 s; Copying: +36.9 s; Copied: +38.2 s; marker row seen: +38.2 s
+
+## case seg5000, run 3 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=5000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: 7P9RS81GTo2H9Gv5Drg59A	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=5000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=5000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=5000}
+
+$ uv run python -m lab.freshness --segment-ms 5000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:28:15,414 INFO __main__: marker marker-6b3c1adb produced at 2026-10-20T13:28:15.413Z (partition 2, offset 0); waiting for it to become queryable
+2026-10-20 15:28:23,960 INFO __main__: queryable after 8.55 s (segment.ms=5000)
+{"seconds_to_queryable": 8.55, "segment_ms": 5000, "filler_interval": 1.0, "filler_sent": 9, "marker": "marker-6b3c1adb", "marker_partition": 2, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:28:15.413Z", "queryable_seen_utc": "2026-10-20T13:28:23.960Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-2-1  | [2026-10-20 13:28:19,840] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 0 ms.
+kafka-2-1  | [2026-10-20 13:28:21,650] INFO [RemoteLogManager=2 partition=7P9RS81GTo2H9Gv5Drg59A:events-2] Copying 00000000000000000000.log to remote storage.
+kafka-2-1  | [2026-10-20 13:28:22,879] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 0 ms.
+kafka-2-1  | [2026-10-20 13:28:23,288] INFO [RemoteLogManager=2 partition=7P9RS81GTo2H9Gv5Drg59A:events-2] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-1-1  | [2026-10-20 13:28:19,844] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 0 ms.
+kafka-1-1  | [2026-10-20 13:28:22,879] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 1 ms.
+kafka-3-1  | [2026-10-20 13:28:19,844] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 2 in 1 ms.
+kafka-3-1  | [2026-10-20 13:28:22,877] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 4 in 0 ms.
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-2 (offset 0); Rolled new log segment: +4.4 s; Copying: +6.2 s; Copied: +7.9 s; marker row seen: +8.55 s
+
+## case seg15000, run 3 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=15000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: _Nhl1yePQ3aJeNuE1nt8eA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=15000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=15000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=15000}
+
+$ uv run python -m lab.freshness --segment-ms 15000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:29:07,953 INFO __main__: marker marker-d37bc200 produced at 2026-10-20T13:29:07.953Z (partition 2, offset 0); waiting for it to become queryable
+2026-10-20 15:29:30,524 INFO __main__: queryable after 22.57 s (segment.ms=15000)
+{"seconds_to_queryable": 22.57, "segment_ms": 15000, "filler_interval": 1.0, "filler_sent": 23, "marker": "marker-d37bc200", "marker_partition": 2, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:29:07.953Z", "queryable_seen_utc": "2026-10-20T13:29:30.524Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-2-1  | [2026-10-20 13:29:24,405] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 7 in 1 ms.
+kafka-2-1  | [2026-10-20 13:29:25,419] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 6 in 0 ms.
+kafka-3-1  | [2026-10-20 13:29:24,401] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 7 in 0 ms.
+kafka-3-1  | [2026-10-20 13:29:25,419] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 6 in 1 ms.
+kafka-3-1  | [2026-10-20 13:29:28,816] INFO [RemoteLogManager=3 partition=_Nhl1yePQ3aJeNuE1nt8eA:events-2] Copying 00000000000000000000.log to remote storage.
+kafka-3-1  | [2026-10-20 13:29:29,919] INFO [RemoteLogManager=3 partition=_Nhl1yePQ3aJeNuE1nt8eA:events-2] Copied 00000000000000000000.log to remote storage with segment-id: ...
+kafka-1-1  | [2026-10-20 13:29:24,404] INFO [LocalLog partition=events-2, dir=/var/lib/kafka/data/events-2] Rolled new log segment at offset 7 in 1 ms.
+kafka-1-1  | [2026-10-20 13:29:25,417] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 6 in 1 ms.
+kafka-1-1  | [2026-10-20 13:29:28,523] INFO [RemoteLogManager=1 partition=_Nhl1yePQ3aJeNuE1nt8eA:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:29:30,166] INFO [RemoteLogManager=1 partition=_Nhl1yePQ3aJeNuE1nt8eA:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-2 (offset 0); Rolled new log segment: +16.5 s; Copying: +20.9 s; Copied: +22.0 s; marker row seen: +22.57 s
+
+## case seg60000, run 3 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=60000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: ZqyA6gA_SCSXUyagq5icOw	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=104857600,retention.ms=-1,segment.ms=60000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=60000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=60000}
+
+$ uv run python -m lab.freshness --segment-ms 60000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:30:14,819 INFO __main__: marker marker-d593de29 produced at 2026-10-20T13:30:14.818Z (partition 0, offset 0); waiting for it to become queryable
+2026-10-20 15:31:15,778 INFO __main__: queryable after 60.96 s (segment.ms=60000)
+{"seconds_to_queryable": 60.96, "segment_ms": 60000, "filler_interval": 1.0, "filler_sent": 61, "marker": "marker-d593de29", "marker_partition": 0, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:30:14.818Z", "queryable_seen_utc": "2026-10-20T13:31:15.778Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-2-1  | [2026-10-20 13:31:13,732] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 24 in 0 ms.
+kafka-1-1  | [2026-10-20 13:31:13,732] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 24 in 1 ms.
+kafka-3-1  | [2026-10-20 13:31:13,729] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 24 in 1 ms.
+kafka-3-1  | [2026-10-20 13:31:14,127] INFO [RemoteLogManager=3 partition=ZqyA6gA_SCSXUyagq5icOw:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-3-1  | [2026-10-20 13:31:15,692] INFO [RemoteLogManager=3 partition=ZqyA6gA_SCSXUyagq5icOw:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-0 (offset 0); Rolled new log segment: +58.9 s; Copying: +59.3 s; Copied: +60.9 s; marker row seen: +60.96 s
+
+## case control, run 3 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ LOCAL_RETENTION_MS=30000 make topic
+Created topic events.
+Topic: events	TopicId: 1mab_3JTQuGElBnBwlYHuQ	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=30000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=30000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=1048576 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=1048576, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=604800000 sensitive=false synonyms={}
+
+$ uv run python -m lab.freshness --segment-ms 0 --filler-interval 0 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:31:57,474 INFO __main__: marker marker-01018462 produced at 2026-10-20T13:31:57.474Z (partition 0, offset 0); waiting for it to become queryable
+2026-10-20 15:32:31,698 INFO __main__: queryable after 34.22 s (segment.ms=0)
+{"seconds_to_queryable": 34.22, "segment_ms": 0, "filler_interval": 0.0, "filler_sent": 0, "marker": "marker-01018462", "marker_partition": 0, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:31:57.474Z", "queryable_seen_utc": "2026-10-20T13:32:31.698Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-2-1  | [2026-10-20 13:32:28,342] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 1 in 1 ms.
+kafka-3-1  | [2026-10-20 13:32:28,338] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 1 in 0 ms.
+kafka-1-1  | [2026-10-20 13:32:28,336] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 1 in 1 ms.
+kafka-1-1  | [2026-10-20 13:32:29,722] INFO [RemoteLogManager=1 partition=1mab_3JTQuGElBnBwlYHuQ:events-0] Copying 00000000000000000000.log to remote storage.
+kafka-1-1  | [2026-10-20 13:32:31,167] INFO [RemoteLogManager=1 partition=1mab_3JTQuGElBnBwlYHuQ:events-0] Copied 00000000000000000000.log to remote storage with segment-id: ...
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-0 (offset 0); Rolled new log segment: +30.9 s; Copying: +32.2 s; Copied: +33.7 s; marker row seen: +34.22 s
+
+## case seg60000-lrms600000, run 1 of 3
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ SEGMENT_MS=60000 SEGMENT_BYTES=104857600 LOCAL_RETENTION_MS=600000 make topic
+Created topic events.
+Topic: events	TopicId: OEmlVh0zSuW0w2pq_a94dA	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=600000,segment.bytes=104857600,retention.ms=-1,segment.ms=60000
+
+$ bash -c docker compose exec -T kafka-1 /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka-1:19092 --describe --all --entity-type topics --entity-name events | grep -E '^  (segment\.ms|segment\.bytes|local\.retention\.ms)='
+  local.retention.ms=600000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:local.retention.ms=600000, DEFAULT_CONFIG:log.local.retention.ms=-2}
+  segment.bytes=104857600 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.bytes=104857600, DEFAULT_CONFIG:log.segment.bytes=1073741824}
+  segment.ms=60000 sensitive=false synonyms={DYNAMIC_TOPIC_CONFIG:segment.ms=60000}
+
+$ uv run python -m lab.freshness --segment-ms 60000 --filler-interval 1 --poll 2 --timeout 300   # stdout = the JSON result, stderr lines below (segment-ms 0 = not set)
+2026-10-20 15:33:14,781 INFO __main__: marker marker-d040f0ad produced at 2026-10-20T13:33:14.780Z (partition 1, offset 0); waiting for it to become queryable
+2026-10-20 15:34:17,605 INFO __main__: queryable after 62.82 s (segment.ms=60000)
+{"seconds_to_queryable": 62.82, "segment_ms": 60000, "filler_interval": 1.0, "filler_sent": 63, "marker": "marker-d040f0ad", "marker_partition": 1, "marker_offset": 0, "marker_produced_utc": "2026-10-20T13:33:14.780Z", "queryable_seen_utc": "2026-10-20T13:34:17.604Z"}
+
+$ docker compose logs --no-color kafka-1 kafka-2 kafka-3 | grep -E 'Rolled new log segment|RLMCopyTask\)' | grep -E 'partition=events-|Copying|Copied'
+kafka-2-1  | [2026-10-20 13:34:15,531] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 16 in 5 ms.
+kafka-2-1  | [2026-10-20 13:34:16,541] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 0 ms.
+kafka-1-1  | [2026-10-20 13:34:15,528] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 16 in 1 ms.
+kafka-1-1  | [2026-10-20 13:34:16,543] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 0 ms.
+kafka-3-1  | [2026-10-20 13:34:15,521] INFO [LocalLog partition=events-1, dir=/var/lib/kafka/data/events-1] Rolled new log segment at offset 16 in 0 ms.
+kafka-3-1  | [2026-10-20 13:34:15,945] INFO [RemoteLogManager=3 partition=OEmlVh0zSuW0w2pq_a94dA:events-1] Copying 00000000000000000000.log to remote storage.
+kafka-3-1  | [2026-10-20 13:34:16,543] INFO [LocalLog partition=events-0, dir=/var/lib/kafka/data/events-0] Rolled new log segment at offset 25 in 0 ms.
+kafka-3-1  | [2026-10-20 13:34:17,344] INFO [RemoteLogManager=3 partition=OEmlVh0zSuW0w2pq_a94dA:events-1] Copied 00000000000000000000.log to remote storage with segment-id: ...
+
+# timeline of the marker's partition, seconds after the marker was acknowledged (derived from the JSON line and the broker lines above)
+marker landed in events-1 (offset 0); Rolled new log segment: +60.8 s; Copying: +61.2 s; Copied: +62.6 s; marker row seen: +62.82 s
+
+## summary (one line per run)
+
+seg5000 run 1: 13.49 s, fillers sent 14
+seg15000 run 1: 20.86 s, fillers sent 21
+seg60000 run 1: 64.29 s, fillers sent 64
+control run 1: 34.23 s, fillers sent 0
+seg5000 run 2: 7.24 s, fillers sent 8
+seg15000 run 2: 22.76 s, fillers sent 23
+seg60000 run 2: 72.27 s, fillers sent 72
+control run 2: 38.2 s, fillers sent 0
+seg5000 run 3: 8.55 s, fillers sent 9
+seg15000 run 3: 22.57 s, fillers sent 23
+seg60000 run 3: 60.96 s, fillers sent 61
+control run 3: 34.22 s, fillers sent 0
+seg60000-lrms600000 run 1: 62.82 s, fillers sent 63
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Network continuo-streaming-lab_default  Removed
+

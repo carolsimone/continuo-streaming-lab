@@ -24,3 +24,8 @@ def registry_url() -> str:
 
 def minio_endpoint() -> str:
     return f"localhost:{_port('MINIO_API_PORT', '9000')}"
+
+
+def catalog_url() -> str:
+    """Iceberg REST catalog (stage 2 only; `make up STAGE=iceberg`)."""
+    return f"http://localhost:{_port('ICEBERG_REST_PORT', '8181')}"

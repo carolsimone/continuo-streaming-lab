@@ -1,0 +1,367 @@
+## settings: batch 20000 at 2000/s (0 = unthrottled), order_id keys (Avro), producer batch.num.messages librdkafka default; topic: default (segment.bytes=1048576, local.retention.ms=30000)
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Volume continuo-streaming-lab_minio-data  Creating
+ Volume continuo-streaming-lab_minio-data  Created
+ Volume continuo-streaming-lab_kafka-3-data  Creating
+ Volume continuo-streaming-lab_kafka-3-data  Created
+ Volume continuo-streaming-lab_kafka-2-data  Creating
+ Volume continuo-streaming-lab_kafka-2-data  Created
+ Volume continuo-streaming-lab_kafka-1-data  Creating
+ Volume continuo-streaming-lab_kafka-1-data  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+$ make topic-describe
+docker compose exec kafka-1 /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:19092 --describe --topic events
+Topic: events	TopicId: g4LBedwtS1aiebAnqr8iUQ	PartitionCount: 3	ReplicationFactor: 3	Configs: remote.storage.enable=true,min.insync.replicas=2,local.retention.ms=30000,segment.bytes=1048576,retention.ms=-1
+	Topic: events	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr: 
+	Topic: events	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr: 
+
+## leaders: partition 0 -> broker 2, partition 1 -> broker 3, partition 2 -> broker 1
+
+$ LAB_KEY_FIELD=order_id LAB_BATCH_NUM_MESSAGES= make -s batch N=20000 PACE=2000
+{"produced": 20000, "failed": 0, "first_seq": 0, "last_seq": 19999}
+
+## a) ground truth while the data is still on the leader's disk: kafka-dump-log.sh on partition 0's segment
+
+$ /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events --time -1
+events:0:6569
+events:1:6785
+events:2:6646
+
+$ docker compose exec -T kafka-2 /opt/kafka/bin/kafka-dump-log.sh --files /var/lib/kafka/data/events-0/00000000000000000000.log --print-data-log > $TMP/dump-p0.txt
+first batch lines of the dump:
+baseOffset: 0 lastOffset: 381 count: 382 baseSequence: 0 lastSequence: 381 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 0 size: 29575 magic: 2 compresscodec: none isvalid: true
+baseOffset: 382 lastOffset: 389 count: 8 baseSequence: 382 lastSequence: 389 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 29575 size: 667 magic: 2 compresscodec: none isvalid: true
+baseOffset: 390 lastOffset: 398 count: 9 baseSequence: 390 lastSequence: 398 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 30242 size: 748 magic: 2 compresscodec: none isvalid: true
+baseOffset: 399 lastOffset: 410 count: 12 baseSequence: 399 lastSequence: 410 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 30990 size: 960 magic: 2 compresscodec: none isvalid: true
+baseOffset: 411 lastOffset: 419 count: 9 baseSequence: 411 lastSequence: 419 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 31950 size: 738 magic: 2 compresscodec: none isvalid: true
+baseOffset: 420 lastOffset: 430 count: 11 baseSequence: 420 lastSequence: 430 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 32688 size: 897 magic: 2 compresscodec: none isvalid: true
+baseOffset: 431 lastOffset: 440 count: 10 baseSequence: 431 lastSequence: 440 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 33585 size: 819 magic: 2 compresscodec: none isvalid: true
+baseOffset: 441 lastOffset: 452 count: 12 baseSequence: 441 lastSequence: 452 producerId: 1000 producerEpoch: 0 partitionLeaderEpoch: 0 isControl: false position: 34404 size: 969 magic: 2 compresscodec: none isvalid: true
+batch lines: 659, record lines: 6569, isvalid false: 0
+dump: 6569 records in 659 batches, offsets 0..6568
+
+$ docker compose exec -T kafka-2 /opt/kafka/bin/kafka-dump-log.sh --files /var/lib/kafka/data/events-0/00000000000000000000.index > $TMP/index-p0.txt   # the segment's offset index
+offset: 389 position: 29575
+offset: 452 position: 34404
+offset: 501 position: 38544
+offset: 550 position: 42654
+index entries: 113
+
+$ /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka-1:19092 --topic events --property print.partition=true --property print.offset=true --property print.key=true --property print.value=true --property key.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --property value.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --partition 0 --offset 0 --max-messages 6569 --timeout-ms 20000 > $TMP/cc-local.txt
+Processed a total of 6569 messages
+(returned after 1 s; 6569 records written)
+
+$ python3 -I scripts/verify/cc_compare.py $TMP/cc-local.txt $TMP/dump-p0.jsonl --id order_id   # Kafka console consumer vs dump-p0.jsonl
+consumed 6569 records, offsets 0..6568 | steps != +1: 0 | repeated offsets: 0 | missing offsets in span: 0 | distinct order_ids: 6569 | order_ids not increasing: 0 | order_id differs from the reference at the same offset: 0
+{"consumed": 6569, "first_offset": 0, "last_offset": 6568, "steps_not_plus_one": 0, "first_bad_steps": [], "repeated_offsets": 0, "missing_offsets_in_span": 0, "first_missing": [], "records_without_id": 0, "distinct_ids": 6569, "ids_not_increasing": 0, "offsets_not_in_reference": 0, "id_differs_from_reference": 0, "first_id_differences": [], "id": "order_id"}
+
+## wait until the table holds every record and partition 0's first segment is gone from every broker
+
+[lab] table rows: 20000 (wanted 20000)
+[lab] ok: the first segment (base offset 0) is gone from every broker
+$ make ls-local
+== kafka-1
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-0/00000000000000006569.log
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-1/00000000000000006785.log
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-2/00000000000000006646.log
+== kafka-2
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-0/00000000000000006569.log
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-1/00000000000000006785.log
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-2/00000000000000006646.log
+== kafka-3
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-0/00000000000000006569.log
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-1/00000000000000006785.log
+-rw-r--r-- 1 appuser appuser 0 Oct 21 05:30 /var/lib/kafka/data/events-2/00000000000000006646.log
+
+$ SQL='SELECT kafka.partition AS p, kafka."offset" AS o, key, value.order_id AS order_id, kafka.batch_base_offset AS base, kafka.batch_byte_offset AS byte FROM {table} ORDER BY 1, 2' make -s query > $TMP/table.jsonl
+table rows exported: 20000
+
+$ SQL=SELECT\ kafka.partition\ AS\ p\,\ count\(\*\)\ AS\ n\,\ count\(DISTINCT\ kafka.\"offset\"\)\ AS\ distinct_offsets\,\ min\(kafka.\"offset\"\)\ AS\ lo\,\ max\(kafka.\"offset\"\)\ AS\ hi\ FROM\ \{table\}\ GROUP\ BY\ 1\ ORDER\ BY\ 1 make -s query
+2026-10-21 07:31:10,928 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-6c287e35-7094-49d5-9440-80d262a57f32.metadata.json
+{"p": 0, "n": 6569, "distinct_offsets": 6569, "lo": 0, "hi": 6568}
+{"p": 1, "n": 6785, "distinct_offsets": 6785, "lo": 0, "hi": 6784}
+{"p": 2, "n": 6646, "distinct_offsets": 6646, "lo": 0, "hi": 6645}
+
+## the table against the original segment (partition 0): key, order_id, batch_base_offset vs dump baseOffset, batch_byte_offset vs dump position
+
+$ python3 -I scripts/verify/rows_compare.py $TMP/dump-p0.jsonl $TMP/table.jsonl 0 key order_id base byte
+partition 0: 6569 offsets in reference, 6569 in other, 6569 in both | key: equal 6569, differ 0 | order_id: equal 6569, differ 0 | base: equal 6569, differ 0 | byte: equal 495, differ 6074
+{"reference_rows": 6569, "other_rows": 6569, "common_offsets": 6569, "only_in_reference": 0, "only_in_other": 0, "key": {"equal": 6569, "differ": 0, "first_differences": []}, "order_id": {"equal": 6569, "differ": 0, "first_differences": []}, "base": {"equal": 6569, "differ": 0, "first_differences": []}, "byte": {"equal": 495, "differ": 6074, "first_differences": [[382, 29575, 0], [383, 29575, 0], [384, 29575, 0], [385, 29575, 0], [386, 29575, 0], [387, 29575, 0]]}}
+
+$ python3 -I scripts/verify/index_vs_table.py $TMP/index-p0.txt $TMP/table.jsonl 0   # batch_byte_offset against the offset index
+partition 0: 113 index entries, 6569 table rows; batch_byte_offset == offset-index lookup(offset) on 6569 rows | 114 runs of equal batch_byte_offset, 113 of them start at an index entry (offset, position)
+{"index_entries": 113, "first_entries": [[389, 29575], [452, 34404], [501, 38544], [550, 42654], [608, 47174]], "table_rows": 6569, "rows_where_byte_equals_index_lookup": 6569, "byte_runs": 114, "runs_starting_at_an_index_entry": 113, "first_runs": [[0, 0], [389, 29575], [452, 34404], [501, 38544], [550, 42654]]}
+
+$ SQL=SELECT\ kafka.batch_base_offset\ AS\ base\,\ kafka.batch_byte_offset\ AS\ byte\,\ count\(\*\)\ AS\ records\,\ min\(kafka.\"offset\"\)\ AS\ first_offset\,\ max\(kafka.\"offset\"\)\ AS\ last_offset\ FROM\ \{table\}\ WHERE\ kafka.partition\ =\ 0\ GROUP\ BY\ ALL\ ORDER\ BY\ first_offset\ LIMIT\ 12 make -s query
+2026-10-21 07:31:11,263 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-6c287e35-7094-49d5-9440-80d262a57f32.metadata.json
+{"base": 0, "byte": 0, "records": 382, "first_offset": 0, "last_offset": 381}
+{"base": 382, "byte": 0, "records": 7, "first_offset": 382, "last_offset": 388}
+{"base": 382, "byte": 29575, "records": 1, "first_offset": 389, "last_offset": 389}
+{"base": 390, "byte": 29575, "records": 9, "first_offset": 390, "last_offset": 398}
+{"base": 399, "byte": 29575, "records": 12, "first_offset": 399, "last_offset": 410}
+{"base": 411, "byte": 29575, "records": 9, "first_offset": 411, "last_offset": 419}
+{"base": 420, "byte": 29575, "records": 11, "first_offset": 420, "last_offset": 430}
+{"base": 431, "byte": 29575, "records": 10, "first_offset": 431, "last_offset": 440}
+{"base": 441, "byte": 29575, "records": 11, "first_offset": 441, "last_offset": 451}
+{"base": 441, "byte": 34404, "records": 1, "first_offset": 452, "last_offset": 452}
+{"base": 453, "byte": 34404, "records": 9, "first_offset": 453, "last_offset": 461}
+{"base": 462, "byte": 34404, "records": 10, "first_offset": 462, "last_offset": 471}
+
+## b) Kafka's console consumer, history now served from tiered storage, against the table (partition 0)
+
+$ /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka-1:19092 --topic events --property print.partition=true --property print.offset=true --property print.key=true --property print.value=true --property key.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --property value.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --partition 0 --offset 0 --max-messages 2000 --timeout-ms 30000 > $TMP/cc-tiered-0.txt
+Processed a total of 2000 messages
+(returned after 1 s; 2000 records written)
+
+$ python3 -I scripts/verify/cc_compare.py $TMP/cc-tiered-0.txt $TMP/table-p0.jsonl --id order_id   # Kafka console consumer vs table-p0.jsonl
+consumed 2000 records, offsets 0..2041 | steps != +1: 16 | repeated offsets: 0 | missing offsets in span: 42 | distinct order_ids: 2000 | order_ids not increasing: 0 | order_id differs from the reference at the same offset: 1611
+{"consumed": 2000, "first_offset": 0, "last_offset": 2041, "steps_not_plus_one": 16, "first_bad_steps": [[489, 492], [540, 542], [649, 651], [700, 707], [865, 867], [967, 973], [1084, 1086], [1189, 1195]], "repeated_offsets": 0, "missing_offsets_in_span": 42, "first_missing": [490, 491, 541, 650, 701, 702, 703, 704], "records_without_id": 0, "distinct_ids": 2000, "ids_not_increasing": 0, "offsets_not_in_reference": 0, "id_differs_from_reference": 1611, "first_id_differences": [[389, "o-000001286", "o-000001261"], [390, "o-000001287", "o-000001269"], [391, "o-000001288", "o-000001271"], [392, "o-000001296", "o-000001272"], [393, "o-000001297", "o-000001274"]], "id": "order_id"}
+
+$ /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka-1:19092 --topic events --property print.partition=true --property print.offset=true --property print.key=true --property print.value=true --property key.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --property value.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --partition 0 --offset 4000 --max-messages 2000 --timeout-ms 30000 > $TMP/cc-tiered-deep.txt
+Processed a total of 2000 messages
+(returned after 2 s; 2000 records written)
+
+$ python3 -I scripts/verify/cc_compare.py $TMP/cc-tiered-deep.txt $TMP/table-p0.jsonl --id order_id   # Kafka console consumer vs table-p0.jsonl
+consumed 2000 records, offsets 4000..6057 | steps != +1: 17 | repeated offsets: 0 | missing offsets in span: 58 | distinct order_ids: 2000 | order_ids not increasing: 0 | order_id differs from the reference at the same offset: 2000
+{"consumed": 2000, "first_offset": 4000, "last_offset": 6057, "steps_not_plus_one": 17, "first_bad_steps": [[4056, 4062], [4164, 4168], [4227, 4230], [4398, 4402], [4457, 4463], [4621, 4623], [4723, 4730], [4834, 4839]], "repeated_offsets": 0, "missing_offsets_in_span": 58, "first_missing": [4057, 4058, 4059, 4060, 4061, 4165, 4166, 4167], "records_without_id": 0, "distinct_ids": 2000, "ids_not_increasing": 0, "offsets_not_in_reference": 0, "id_differs_from_reference": 2000, "first_id_differences": [[4000, "o-000012375", "o-000012355"], [4001, "o-000012376", "o-000012356"], [4002, "o-000012379", "o-000012357"], [4003, "o-000012380", "o-000012358"], [4004, "o-000012384", "o-000012365"]], "id": "order_id"}
+
+$ /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka-1:19092 --topic events --property print.partition=true --property print.offset=true --property print.key=true --property print.value=true --property key.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --property value.deserializer=org.apache.kafka.common.serialization.BytesDeserializer --partition 0 --offset 0 --max-messages 6569 --timeout-ms 20000 > $TMP/cc-tiered-all.txt
+[2026-10-21 05:31:54,945] ERROR Error processing message, terminating consumer process:  (org.apache.kafka.tools.consumer.ConsoleConsumer)
+org.apache.kafka.common.errors.TimeoutException: null
+Processed a total of 6407 messages
+(returned after 41 s; 6407 records written)
+
+$ python3 -I scripts/verify/cc_compare.py $TMP/cc-tiered-all.txt $TMP/table-p0.jsonl --id order_id   # Kafka console consumer vs table-p0.jsonl
+consumed 6407 records, offsets 0..6560 | steps != +1: 50 | repeated offsets: 0 | missing offsets in span: 154 | distinct order_ids: 6407 | order_ids not increasing: 0 | order_id differs from the reference at the same offset: 6018
+{"consumed": 6407, "first_offset": 0, "last_offset": 6560, "steps_not_plus_one": 50, "first_bad_steps": [[489, 492], [540, 542], [649, 651], [700, 707], [865, 867], [967, 973], [1084, 1086], [1189, 1195]], "repeated_offsets": 0, "missing_offsets_in_span": 154, "first_missing": [490, 491, 541, 650, 701, 702, 703, 704], "records_without_id": 0, "distinct_ids": 6407, "ids_not_increasing": 0, "offsets_not_in_reference": 0, "id_differs_from_reference": 6018, "first_id_differences": [[389, "o-000001286", "o-000001261"], [390, "o-000001287", "o-000001269"], [391, "o-000001288", "o-000001271"], [392, "o-000001296", "o-000001272"], [393, "o-000001297", "o-000001274"]], "id": "order_id"}
+
+$ python3 -I scripts/verify/cc_compare.py $TMP/cc-tiered-all.txt $TMP/dump-p0.jsonl --id order_id   # Kafka console consumer vs dump-p0.jsonl
+consumed 6407 records, offsets 0..6560 | steps != +1: 50 | repeated offsets: 0 | missing offsets in span: 154 | distinct order_ids: 6407 | order_ids not increasing: 0 | order_id differs from the reference at the same offset: 6018
+{"consumed": 6407, "first_offset": 0, "last_offset": 6560, "steps_not_plus_one": 50, "first_bad_steps": [[489, 492], [540, 542], [649, 651], [700, 707], [865, 867], [967, 973], [1084, 1086], [1189, 1195]], "repeated_offsets": 0, "missing_offsets_in_span": 154, "first_missing": [490, 491, 541, 650, 701, 702, 703, 704], "records_without_id": 0, "distinct_ids": 6407, "ids_not_increasing": 0, "offsets_not_in_reference": 0, "id_differs_from_reference": 6018, "first_id_differences": [[389, "o-000001286", "o-000001261"], [390, "o-000001287", "o-000001269"], [391, "o-000001288", "o-000001271"], [392, "o-000001296", "o-000001272"], [393, "o-000001297", "o-000001274"]], "id": "order_id"}
+
+## c) raw Fetch (v4) to each partition's leader from offset 0, then at (last offset returned + 1), as a consumer would
+
+$ python3 -I scripts/verify/rawfetch.py localhost:9192 events 0 0 --walk 3 --records > $TMP/raw-p0.jsonl   # leader: broker 2
+fetch offset 0 -> NONE, high watermark 6569, 507289 bytes, 114 complete batches
+fetch offset 6561 -> NONE, high watermark 6569, 0 bytes, 0 complete batches
+first batches returned:
+  batch baseOffset 0 lastOffsetDelta 388 (last 388) count 389 | producerId 1000 baseSequence 0 | crc ok | offsetDeltas == index: True | keys o-000000000 .. o-000001253
+  batch baseOffset 382 lastOffsetDelta 62 (last 444) count 63 | producerId 1000 baseSequence 382 | crc ok | offsetDeltas == index: True | keys o-000001261 .. o-000001433
+  batch baseOffset 441 lastOffsetDelta 48 (last 489) count 49 | producerId 1000 baseSequence 441 | crc ok | offsetDeltas == index: True | keys o-000001434 .. o-000001563
+  batch baseOffset 492 lastOffsetDelta 48 (last 540) count 49 | producerId 1000 baseSequence 492 | crc ok | offsetDeltas == index: True | keys o-000001574 .. o-000001726
+$ python3 -I scripts/verify/fetch_vs_table.py $TMP/raw-p0.jsonl $TMP/table.jsonl 0 --id order_id
+partition 0: 114 batches, 6569 records (reference 6569 rows, 0 never returned) | batches whose broker offsets equal the reference's: 1, shifted: 113 (max shift 14) | true offsets contiguous in batch: 114 | baseOffset == reference 'base' of the batch's first record: 114 | batch == exactly one reference 'byte' group: 114 | overlaps with previous batch: 52, gaps: 50 | last offset returned 6560
+  all returned batches: 114, CRC32C ok 114, offsetDelta == record index 114, compressed 0 | offset labels on 6569 records: repeated 162, offsets in [0, 6569) never used 162
+
+$ python3 -I scripts/verify/rawfetch.py localhost:9292 events 1 0 --walk 3 --records > $TMP/raw-p1.jsonl   # leader: broker 3
+fetch offset 0 -> NONE, high watermark 6785, 523297 bytes, 119 complete batches
+fetch offset 6779 -> NONE, high watermark 6785, 0 bytes, 0 complete batches
+first batches returned:
+  batch baseOffset 0 lastOffsetDelta 355 (last 355) count 356 | producerId 1000 baseSequence 0 | crc ok | offsetDeltas == index: True | keys o-000000012 .. o-000001017
+  batch baseOffset 348 lastOffsetDelta 56 (last 404) count 57 | producerId 1000 baseSequence 348 | crc ok | offsetDeltas == index: True | keys o-000001018 .. o-000001170
+  batch baseOffset 406 lastOffsetDelta 52 (last 458) count 53 | producerId 1000 baseSequence 406 | crc ok | offsetDeltas == index: True | keys o-000001172 .. o-000001342
+  batch baseOffset 460 lastOffsetDelta 54 (last 514) count 55 | producerId 1000 baseSequence 460 | crc ok | offsetDeltas == index: True | keys o-000001350 .. o-000001544
+$ python3 -I scripts/verify/fetch_vs_table.py $TMP/raw-p1.jsonl $TMP/table.jsonl 1 --id order_id
+partition 1: 119 batches, 6785 records (reference 6785 rows, 0 never returned) | batches whose broker offsets equal the reference's: 1, shifted: 118 (max shift 14) | true offsets contiguous in batch: 119 | baseOffset == reference 'base' of the batch's first record: 119 | batch == exactly one reference 'byte' group: 119 | overlaps with previous batch: 53, gaps: 54 | last offset returned 6778
+  all returned batches: 119, CRC32C ok 119, offsetDelta == record index 119, compressed 0 | offset labels on 6785 records: repeated 179, offsets in [0, 6785) never used 179
+
+$ python3 -I scripts/verify/rawfetch.py localhost:9092 events 2 0 --walk 3 --records > $TMP/raw-p2.jsonl   # leader: broker 1
+fetch offset 0 -> NONE, high watermark 6646, 512778 bytes, 116 complete batches
+fetch offset 6637 -> NONE, high watermark 6646, 0 bytes, 0 complete batches
+first batches returned:
+  batch baseOffset 0 lastOffsetDelta 351 (last 351) count 352 | producerId 1000 baseSequence 0 | crc ok | offsetDeltas == index: True | keys o-000000001 .. o-000001015
+  batch baseOffset 343 lastOffsetDelta 56 (last 399) count 57 | producerId 1000 baseSequence 343 | crc ok | offsetDeltas == index: True | keys o-000001019 .. o-000001178
+  batch baseOffset 401 lastOffsetDelta 47 (last 448) count 48 | producerId 1000 baseSequence 401 | crc ok | offsetDeltas == index: True | keys o-000001181 .. o-000001330
+  batch baseOffset 452 lastOffsetDelta 62 (last 514) count 63 | producerId 1000 baseSequence 452 | crc ok | offsetDeltas == index: True | keys o-000001334 .. o-000001497
+$ python3 -I scripts/verify/fetch_vs_table.py $TMP/raw-p2.jsonl $TMP/table.jsonl 2 --id order_id
+partition 2: 116 batches, 6646 records (reference 6646 rows, 0 never returned) | batches whose broker offsets equal the reference's: 1, shifted: 115 (max shift 16) | true offsets contiguous in batch: 116 | baseOffset == reference 'base' of the batch's first record: 116 | batch == exactly one reference 'byte' group: 116 | overlaps with previous batch: 49, gaps: 58 | last offset returned 6636
+  all returned batches: 116, CRC32C ok 116, offsetDelta == record index 116, compressed 0 | offset labels on 6646 records: repeated 173, offsets in [0, 6646) never used 173
+
+$ python3 -I scripts/verify/fetch_vs_table.py $TMP/raw-p0.jsonl $TMP/table.jsonl 0 $TMP/dump-p0.jsonl --id order_id   # the same batches, also against the producer's batches
+partition 0: 114 batches, 6569 records (reference 6569 rows, 0 never returned) | batches whose broker offsets equal the reference's: 1, shifted: 113 (max shift 14) | true offsets contiguous in batch: 114 | baseOffset == reference 'base' of the batch's first record: 114 | batch == exactly one reference 'byte' group: 114 | overlaps with previous batch: 52, gaps: 50 | last offset returned 6560
+  all returned batches: 114, CRC32C ok 114, offsetDelta == record index 114, compressed 0 | offset labels on 6569 records: repeated 162, offsets in [0, 6569) never used 162
+  against the original segment (659 producer batches): returned batches equal to a producer batch: 0 | returned batches whose first record is the last record of a producer batch: 113
+$ python3 -I scripts/verify/fetch_vs_table.py $TMP/raw-p0.jsonl $TMP/dump-p0.jsonl 0 --id order_id   # reference = the original segment ('byte' = producer batch position)
+partition 0: 114 batches, 6569 records (reference 6569 rows, 0 never returned) | batches whose broker offsets equal the reference's: 1, shifted: 113 (max shift 14) | true offsets contiguous in batch: 114 | baseOffset == reference 'base' of the batch's first record: 114 | batch == exactly one reference 'byte' group: 0 | overlaps with previous batch: 52, gaps: 50 | last offset returned 6560
+  all returned batches: 114, CRC32C ok 114, offsetDelta == record index 114, compressed 0 | offset labels on 6569 records: repeated 162, offsets in [0, 6569) never used 162
+
+## raw Fetch at the next offset after the last one partition 0 returned (6561), three times 20 s apart, and at the end offset 6569
+
+$ python3 -I scripts/verify/rawfetch.py localhost:9192 events 0 6561   # 05:32:03.262 UTC
+fetch offset 6561 -> NONE, high watermark 6569, 0 bytes, 0 complete batches
+$ python3 -I scripts/verify/rawfetch.py localhost:9192 events 0 6561   # 05:32:23.413 UTC
+fetch offset 6561 -> NONE, high watermark 6569, 0 bytes, 0 complete batches
+$ python3 -I scripts/verify/rawfetch.py localhost:9192 events 0 6561   # 05:32:43.584 UTC
+fetch offset 6561 -> NONE, high watermark 6569, 0 bytes, 0 complete batches
+$ python3 -I scripts/verify/rawfetch.py localhost:9192 events 0 6569
+fetch offset 6569 -> NONE, high watermark 6569, 0 bytes, 0 complete batches
+
+## d) partition 0 leader (broker 2) log since 2026-10-21T05:31:11Z: line kinds, with numbers replaced by N
+
+lines: 2932, WARN: 0, ERROR: 0, lines with 'Exception': 0, 'Time taken': 0, io.aiven loggers: 0
+1440 DEBUG Reading records from remote storage for topic partition events-N (kafka.log.remote.RemoteLogReader)
+1440 DEBUG Finished reading records from remote storage for topic partition events-N (kafka.log.remote.RemoteLogReader)
+  20 DEBUG [RemoteLogManager=N partition=gNLBedwtSNaiebAnqrNiUQ:events-N] No segments found to be copied for partition gNLBedwtSNaiebAnqrNiUQ:events-N with copiedOffset: N and
+  20 DEBUG [RemoteLogManager=N partition=gNLBedwtSNaiebAnqrNiUQ:events-N] Candidate log segments, logStartOffset: N, copiedOffset: N, fromOffset: N, lso: N and candidateLogSeg
+   3 INFO [LocalLog partition=events-N, dir=/var/lib/kafka/data/events-N] Deleting segment files LogSegment(baseOffset=N, size=N, lastModifiedTime=N, largestRecordTimestamp=N)
+   3 INFO Deleted time index /var/lib/kafka/data/events-N/N.timeindex.deleted. (org.apache.kafka.storage.internals.log.LogSegment)
+   3 INFO Deleted offset index /var/lib/kafka/data/events-N/N.index.deleted. (org.apache.kafka.storage.internals.log.LogSegment)
+   3 INFO Deleted log /var/lib/kafka/data/events-N/N.log.deleted. (org.apache.kafka.storage.internals.log.LogSegment)
+remote reads (RemoteLogReader 'Reading records') per minute:
+1437 05:31
+   3 05:32
+
+## e) the lab's own tool on the same data (librdkafka), for comparison with c)
+
+$ uv run python -m lab.pairs   # stdout = one JSON line
+2026-10-21 07:32:49,479 INFO __main__: log start offsets {0: 0, 1: 0, 2: 0}, end offsets {0: 6569, 1: 6785, 2: 6646}
+2026-10-21 07:32:49,540 INFO __main__: table holds 20000 rows
+2026-10-21 07:33:20,741 ERROR __main__: replay stopped early (no record for 30.0s) after 20000 records: p0 last 6560 of end 6569; p1 last 6778 of end 6785; p2 last 6636 of end 6646
+2026-10-21 07:33:20,742 INFO __main__: replay read 20000 records in 31.2 s (no record for 30.0s); consumer positions {'0': 6561, '1': 6779, '2': 6637}
+2026-10-21 07:33:20,762 INFO __main__: table duplicates 0, table missing 0, replay duplicates 514, replay missing 514
+{"partitions": {"0": {"low": 0, "end_offset": 6569, "expected": 6569, "table_rows": 6569, "table_distinct": 6569, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 6569, "replay_distinct": 6407, "replay_duplicates": 162, "replay_missing": 162, "replay_missing_ranges": [[490, 491], [541, 541], [650, 650], [701, 706], [866, 866], [968, 972], [1085, 1085], [1190, 1194], [1296, 1298], [1457, 1457]], "replay_beyond_end": 0, "table_only": 162, "replay_only": 0}, "1": {"low": 0, "end_offset": 6785, "expected": 6785, "table_rows": 6785, "table_distinct": 6785, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 6785, "replay_distinct": 6606, "replay_duplicates": 179, "replay_missing": 179, "replay_missing_ranges": [[405, 405], [459, 459], [564, 564], [616, 618], [765, 770], [932, 933], [1041, 1041], [1146, 1147], [1309, 1309], [1365, 1367]], "replay_beyond_end": 0, "table_only": 179, "replay_only": 0}, "2": {"low": 0, "end_offset": 6646, "expected": 6646, "table_rows": 6646, "table_distinct": 6646, "table_duplicates": 0, "table_missing": 0, "table_missing_ranges": [], "table_beyond_end": 0, "replay_rows": 6646, "replay_distinct": 6473, "replay_duplicates": 173, "replay_missing": 173, "replay_missing_ranges": [[400, 400], [449, 451], [555, 559], [669, 669], [730, 731], [898, 899], [1060, 1063], [1113, 1113], [1272, 1276], [1440, 1440]], "replay_beyond_end": 0, "table_only": 173, "replay_only": 0}}, "totals": {"expected": 20000, "table_rows": 20000, "table_distinct": 20000, "table_duplicates": 0, "table_missing": 0, "table_beyond_end": 0, "replay_rows": 20000, "replay_distinct": 19486, "replay_duplicates": 514, "replay_missing": 514, "replay_beyond_end": 0, "table_only": 514, "replay_only": 0}, "content": {"partitions": {"0": {"offsets_with_different_record": 6018, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0, "table_order_ids_not_in_replay": 0, "replay_order_ids_not_in_table": 0}, "1": {"offsets_with_different_record": 6250, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0, "table_order_ids_not_in_replay": 0, "replay_order_ids_not_in_table": 0}, "2": {"offsets_with_different_record": 6121, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0, "table_order_ids_not_in_replay": 0, "replay_order_ids_not_in_table": 0}}, "totals": {"offsets_with_different_record": 18389, "table_duplicate_order_ids": 0, "replay_duplicate_order_ids": 0, "table_order_ids_not_in_replay": 0, "replay_order_ids_not_in_table": 0}}, "table_status": "ok", "replay_status": "no record for 30.0s", "replay_positions": {"0": 6561, "1": 6779, "2": 6637}}
+
+partition 0: broker end offset 6569 (log start 0) | table rows 6569, duplicates 0, missing 0 [] | replay rows 6569, duplicates 162, missing 162 [[490, 491], [541, 541], [650, 650], [701, 706], [866, 866], [968, 972], [1085, 1085], [1190, 1194], [1296, 1298], [1457, 1457]] | in table only 162, in replay only 0
+partition 1: broker end offset 6785 (log start 0) | table rows 6785, duplicates 0, missing 0 [] | replay rows 6785, duplicates 179, missing 179 [[405, 405], [459, 459], [564, 564], [616, 618], [765, 770], [932, 933], [1041, 1041], [1146, 1147], [1309, 1309], [1365, 1367]] | in table only 179, in replay only 0
+partition 2: broker end offset 6646 (log start 0) | table rows 6646, duplicates 0, missing 0 [] | replay rows 6646, duplicates 173, missing 173 [[400, 400], [449, 451], [555, 559], [669, 669], [730, 731], [898, 899], [1060, 1063], [1113, 1113], [1272, 1276], [1440, 1440]] | in table only 173, in replay only 0
+content: offsets whose record differs between table and replay 18389, order_ids repeated in the replay 0, in the table 0, order_ids in the table but not in the replay 0, in the replay but not in the table 0
+replay status: no record for 30.0s; consumer positions at the end {'0': 6561, '1': 6779, '2': 6637}
+total: broker records 20000, table rows 20000, table duplicates 0, table missing 0, replay rows 20000, replay duplicates 514, replay missing 514
+
+## f) does new data free a consumer stuck at 6561? produce 300 more records, then fetch there again
+
+$ make -s batch N=300 START=20000
+{"produced": 300, "failed": 0, "first_seq": 20000, "last_seq": 20299}
+
+$ /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka-1:19092 --topic events --partitions 0 --time -1
+events:0:6657
+$ python3 -I scripts/verify/rawfetch.py localhost:9192 events 0 6561,6569   # 05:33:22.356 UTC
+fetch offset 6561 -> NONE, high watermark 6657, 0 bytes, 0 complete batches
+fetch offset 6569 -> NONE, high watermark 6657, 6762 bytes, 1 complete batches
+  batch baseOffset 6569 lastOffsetDelta 87 (last 6656) count 88 | producerId 1001 baseSequence 0 | crc ok | offsetDeltas == index: True | keys o-000020001 .. o-000020298
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Network continuo-streaming-lab_default  Removed
+

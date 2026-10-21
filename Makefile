@@ -1,7 +1,12 @@
 # STAGE=iceberg switches every compose call to include the Iceberg override.
 ifeq ($(STAGE),iceberg)
 export COMPOSE_FILE := compose.yml:compose.iceberg.yml
+# Iceberg mode reads the record key as Avro too, so the producer must send Avro keys. A value from
+# the command line (make LAB_KEY_SERDE=string ...) or the shell wins over this default.
+LAB_KEY_SERDE ?= avro
 endif
+# Producer key knobs (see `python -m lab.produce --help`). Empty = the producer's own default.
+export LAB_KEY_SERDE LAB_KEY_FIELD LAB_BATCH_NUM_MESSAGES
 
 PLUGIN_VERSION := 1.1.1
 PLUGIN_URL     := https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/releases/download/v$(PLUGIN_VERSION)
@@ -13,7 +18,7 @@ COMPOSE := docker compose
 # Port overrides from a gitignored .env (KEY=value lines) reach the host tools too, not just compose.
 # As in compose, a value already set in the shell wins over .env. A variable that neither sets is
 # exported empty, which compose (`${VAR:-default}`) and lab/endpoints.py both treat as unset.
-PORT_VARS := KAFKA_1_PORT KAFKA_2_PORT KAFKA_3_PORT SCHEMA_REGISTRY_PORT MINIO_API_PORT MINIO_CONSOLE_PORT
+PORT_VARS := KAFKA_1_PORT KAFKA_2_PORT KAFKA_3_PORT SCHEMA_REGISTRY_PORT MINIO_API_PORT MINIO_CONSOLE_PORT ICEBERG_REST_PORT
 $(foreach v,$(PORT_VARS),$(if $($(v)),$(eval _shell_$(v) := $($(v)))))
 -include .env
 $(foreach v,$(PORT_VARS),$(if $(_shell_$(v)),$(eval $(v) := $(_shell_$(v)))))
@@ -31,10 +36,10 @@ MC := $(COMPOSE) run --rm --no-deps -T --entrypoint sh minio-init -c
 
 .DEFAULT_GOAL := help
 .PHONY: help plugin up down rebuild clean clean-plugin ps logs produce produce-stop batch \
-        topic topic-describe ls-minio ls-local replay broker-stop broker-start test
+        topic topic-describe ls-minio ls-local replay query broker-stop broker-start test
 
 help: ## List targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
+	@grep -hE '^[a-z-]+:.*## ' $(firstword $(MAKEFILE_LIST)) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
 
 plugin: plugin/.installed ## Download the Aiven plugin into ./plugin (checksum-verified)
 
@@ -91,8 +96,9 @@ topic: ## (Re)create the tiered events topic (PARTITIONS, REPLICATION_FACTOR, SE
 topic-describe: ## Leader, replicas and in-sync replicas per partition (VIA=n asks broker n, default 1)
 	$(COMPOSE) exec kafka-$(or $(VIA),1) $(KAFKA_TOPICS) --describe --topic events
 
-ls-minio: ## List tiered objects in MinIO (per partition)
-	@$(MC) 'mc alias set l http://minio:9000 minioadmin minioadmin >/dev/null && mc ls -r l/kafka-tiered; mc du l/kafka-tiered'
+ls-minio: ## List both buckets in MinIO: kafka-tiered (stage 1 segments) and warehouse (stage 2 Iceberg table)
+	@$(MC) 'mc alias set l http://minio:9000 minioadmin minioadmin >/dev/null; \
+	  for b in kafka-tiered warehouse; do echo "== $$b"; mc ls -r l/$$b; mc du l/$$b; done'
 
 ls-local: ## List the segments each broker still holds on its own disk
 	@for n in 1 2 3; do \
@@ -102,6 +108,9 @@ ls-local: ## List the segments each broker still holds on its own disk
 
 replay: ## Replay events from offset 0 (served from MinIO once local segments are gone)
 	uv run python -m lab.replay
+
+query: ## Query the Iceberg table via DuckDB (SQL="... FROM {table}")
+	uv run python -m lab.query $${SQL:+--sql "$$SQL"}
 
 broker-stop: ## Stop one broker: make broker-stop BROKER=2
 	@test -n "$(BROKER)" || { echo "usage: make broker-stop BROKER=1|2|3" >&2; exit 2; }

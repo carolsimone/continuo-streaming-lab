@@ -1,0 +1,34 @@
+## null counts: are key_raw and value_raw empty when key and value deserialize as Avro?
+
+$ SQL=SELECT\ count\(\*\)\ AS\ n\,\ count\(key\)\ AS\ key_not_null\,\ count\(key_raw\)\ AS\ key_raw_not_null\,\ count\(value\)\ AS\ value_not_null\,\ count\(value_raw\)\ AS\ value_raw_not_null\ FROM\ \{table\} make -s query
+2026-10-20 13:55:46,881 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"n": 20000, "key_not_null": 20000, "key_raw_not_null": 0, "value_not_null": 20000, "value_raw_not_null": 0}
+
+## headers: how many headers per record, and one sample
+
+$ SQL=SELECT\ len\(headers\)\ AS\ header_count\,\ count\(\*\)\ AS\ n\ FROM\ \{table\}\ GROUP\ BY\ 1\ ORDER\ BY\ 1 make -s query
+2026-10-20 13:55:47,010 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"header_count": 0, "n": 20000}
+
+$ SQL=SELECT\ kafka.partition\,\ kafka.\"offset\"\,\ headers\ FROM\ \{table\}\ ORDER\ BY\ kafka.partition\,\ kafka.\"offset\"\ LIMIT\ 3 make -s query
+2026-10-20 13:55:47,135 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"partition": 0, "offset": 0, "headers": []}
+{"partition": 0, "offset": 1, "headers": []}
+{"partition": 0, "offset": 2, "headers": []}
+
+## kafka.timestamp against the event timestamp inside the value
+
+$ SQL=SELECT\ min\(kafka.timestamp\)\ AS\ min_ts\,\ max\(kafka.timestamp\)\ AS\ max_ts\,\ count\(DISTINCT\ kafka.timestamp\)\ AS\ distinct_ts\,\ min\(kafka.timestamp\ -\ value.event_ts_ms\)\ AS\ min_lag_ms\,\ max\(kafka.timestamp\ -\ value.event_ts_ms\)\ AS\ max_lag_ms\ FROM\ \{table\} make -s query
+2026-10-20 13:55:47,261 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"min_ts": 1792497306631, "max_ts": 1792497306762, "distinct_ts": 132, "min_lag_ms": 0, "max_lag_ms": 728}
+
+$ SQL=SELECT\ epoch_ms\(min\(kafka.timestamp\)\)\ AS\ first_record_time\,\ epoch_ms\(max\(kafka.timestamp\)\)\ AS\ last_record_time\ FROM\ \{table\} make -s query
+2026-10-20 13:55:47,387 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"first_record_time": "2026-10-20 11:55:06.631000", "last_record_time": "2026-10-20 11:55:06.762000"}
+
+## kafka.batch_*: one row per distinct combination of the constant batch fields (batches = distinct (partition, batch_base_offset))
+
+$ SQL=SELECT\ kafka.batch_magic\,\ kafka.batch_timestamp_type\,\ kafka.batch_compression_type\,\ kafka.batch_producer_epoch\,\ count\(\*\)\ AS\ n\,\ count\(DISTINCT\ kafka.batch_producer_id\)\ AS\ producer_ids\,\ count\(DISTINCT\ \(kafka.partition\,\ kafka.batch_base_offset\)\)\ AS\ batches\ FROM\ \{table\}\ GROUP\ BY\ ALL\ ORDER\ BY\ ALL make -s query
+2026-10-20 13:55:47,515 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+{"batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_producer_epoch": 0, "n": 20000, "producer_ids": 1, "batches": 20}
+

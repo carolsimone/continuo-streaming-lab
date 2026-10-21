@@ -1,0 +1,216 @@
+## before: rows through the catalog, and the table's metadata pointer
+
+$ SQL=SELECT\ count\(\*\)\ AS\ row_count\ FROM\ \{table\} make -s query
+2026-10-20 13:56:34,366 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
+{"row_count": 40000}
+
+$ curl -s http://localhost:8181/v1/namespaces/default/tables/events | python3 (print metadata-location)
+s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
+
+## step 1: restart the catalog container
+
+$ docker compose restart iceberg-rest
+ Container continuo-streaming-lab-iceberg-rest-1  Restarting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+
+[lab] ok: catalog answers again
+## after restart: same query, same table
+
+$ SQL=SELECT\ count\(\*\)\ AS\ row_count\ FROM\ \{table\} make -s query
+2026-10-20 13:56:37,451 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
+{"row_count": 40000}
+
+$ curl -s http://localhost:8181/v1/namespaces/default/tables/events | python3 (print metadata-location)
+s3://warehouse/default/events/metadata/00009-285669a5-a6ff-425e-9c40-7dbb605bfaec.metadata.json
+
+## step 2: make down (removes the containers, keeps the volumes), then make up STAGE=iceberg
+
+$ make down
+docker compose --profile producer down --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Network continuo-streaming-lab_default  Removing
+ Network continuo-streaming-lab_default  Removed
+
+$ make up STAGE=iceberg
+docker compose up -d --wait
+ Network continuo-streaming-lab_default  Creating
+ Network continuo-streaming-lab_default  Created
+ Container continuo-streaming-lab-minio-1  Creating
+ Container continuo-streaming-lab-minio-1  Created
+ Container continuo-streaming-lab-minio-init-1  Creating
+ Container continuo-streaming-lab-minio-init-1  Created
+ Container continuo-streaming-lab-iceberg-rest-1  Creating
+ Container continuo-streaming-lab-iceberg-rest-1  Created
+ Container continuo-streaming-lab-kafka-1-1  Creating
+ Container continuo-streaming-lab-kafka-3-1  Creating
+ Container continuo-streaming-lab-kafka-2-1  Creating
+ Container continuo-streaming-lab-kafka-1-1  Created
+ Container continuo-streaming-lab-kafka-3-1  Created
+ Container continuo-streaming-lab-kafka-2-1  Created
+ Container continuo-streaming-lab-topic-init-1  Creating
+ Container continuo-streaming-lab-topic-init-1  Created
+ Container continuo-streaming-lab-karapace-1  Creating
+ Container continuo-streaming-lab-karapace-1  Created
+ Container continuo-streaming-lab-minio-1  Starting
+ Container continuo-streaming-lab-minio-1  Started
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-minio-init-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Starting
+ Container continuo-streaming-lab-iceberg-rest-1  Started
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-1-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Starting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-kafka-2-1  Starting
+ Container continuo-streaming-lab-kafka-3-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Started
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Starting
+ Container continuo-streaming-lab-topic-init-1  Started
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-karapace-1  Starting
+ Container continuo-streaming-lab-karapace-1  Started
+ Container continuo-streaming-lab-kafka-3-1  Waiting
+ Container continuo-streaming-lab-kafka-2-1  Waiting
+ Container continuo-streaming-lab-kafka-1-1  Waiting
+ Container continuo-streaming-lab-iceberg-rest-1  Waiting
+ Container continuo-streaming-lab-karapace-1  Waiting
+ Container continuo-streaming-lab-topic-init-1  Waiting
+ Container continuo-streaming-lab-minio-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Waiting
+ Container continuo-streaming-lab-minio-init-1  Exited
+ Container continuo-streaming-lab-iceberg-rest-1  Healthy
+ Container continuo-streaming-lab-kafka-1-1  Healthy
+ Container continuo-streaming-lab-kafka-2-1  Healthy
+ Container continuo-streaming-lab-minio-1  Healthy
+ Container continuo-streaming-lab-topic-init-1  Exited
+ Container continuo-streaming-lab-kafka-3-1  Healthy
+ Container continuo-streaming-lab-karapace-1  Healthy
+
+[lab] ok: catalog answers again
+## after removal: namespaces and the table
+
+$ curl -s http://localhost:8181/v1/namespaces
+{"namespaces":[],"next-page-token":null}
+
+$ curl -s -w '\nHTTP %{http_code}\n' http://localhost:8181/v1/namespaces/default/tables/events
+{"error":{"message":"Table does not exist: default.events","type":"NoSuchTableException","code":404,"stack":["org.apache.iceberg.exceptions.NoSuchTableException: Table does not exist: default.events","\tat org.apache.iceberg.BaseMetastoreCatalog.loadTable(BaseMetastoreCatalog.java:55)","\tat org.apache.iceberg.rest.CatalogHandlers.loadTable(CatalogHandlers.java:329)","\tat org.apache.iceberg.rest.RESTCatalogAdapter.handleRequest(RESTCatalogAdapter.java:420)","\tat org.apache.iceberg.rest.RESTServerCatalogAdapter.handleRequest(RESTServerCatalogAdapter.java:42)","\tat org.apache.iceberg.rest.RESTCatalogAdapter.execute(RESTCatalogAdapter.java:628)","\tat org.apache.iceberg.rest.RESTCatalogAdapter.execute(RESTCatalogAdapter.java:609)","\tat org.apache.iceberg.rest.RESTCatalogServlet.execute(RESTCatalogServlet.java:108)","\tat org.apache.iceberg.rest.RESTCatalogServlet.doGet(RESTCatalogServlet.java:66)","\tat jakarta.servlet.http.HttpServlet.service(HttpServlet.java:500)","\tat jakarta.servlet.http.HttpServlet.service(HttpServlet.java:587)","\tat org.eclipse.jetty.servlet.ServletHolder.handle(ServletHolder.java:764)","\tat org.eclipse.jetty.servlet.ServletHandler.doHandle(ServletHandler.java:529)","\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:131)","\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:122)","\tat org.eclipse.jetty.server.handler.gzip.GzipHandler.handle(GzipHandler.java:822)","\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:122)","\tat org.eclipse.jetty.server.handler.ScopedHandler.nextHandle(ScopedHandler.java:223)","\tat org.eclipse.jetty.server.handler.ContextHandler.doHandle(ContextHandler.java:1381)","\tat org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:176)","\tat org.eclipse.jetty.servlet.ServletHandler.doScope(ServletHandler.java:484)","\tat org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:174)","\tat org.eclipse.jetty.server.handler.ContextHandler.doScope(ContextHandler.java:1303)","\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:129)","\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:122)","\tat org.eclipse.jetty.server.Server.handle(Server.java:563)","\tat org.eclipse.jetty.server.HttpChannel$RequestDispatchable.dispatch(HttpChannel.java:1598)","\tat org.eclipse.jetty.server.HttpChannel.dispatch(HttpChannel.java:753)","\tat org.eclipse.jetty.server.HttpChannel.handle(HttpChannel.java:501)","\tat org.eclipse.jetty.server.HttpConnection.onFillable(HttpConnection.java:287)","\tat org.eclipse.jetty.io.AbstractConnection$ReadCallback.succeeded(AbstractConnection.java:314)","\tat org.eclipse.jetty.io.FillInterest.fillable(FillInterest.java:100)","\tat org.eclipse.jetty.io.SelectableChannelEndPoint$1.run(SelectableChannelEndPoint.java:53)","\tat org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.runTask(AdaptiveExecutionStrategy.java:421)","\tat org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.consumeTask(AdaptiveExecutionStrategy.java:390)","\tat org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.tryProduce(AdaptiveExecutionStrategy.java:277)","\tat org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.run(AdaptiveExecutionStrategy.java:199)","\tat org.eclipse.jetty.util.thread.ReservedThreadExecutor$ReservedThread.run(ReservedThreadExecutor.java:411)","\tat org.eclipse.jetty.util.thread.QueuedThreadPool.runJob(QueuedThreadPool.java:969)","\tat org.eclipse.jetty.util.thread.QueuedThreadPool$Runner.doRunJob(QueuedThreadPool.java:1194)","\tat org.eclipse.jetty.util.thread.QueuedThreadPool$Runner.run(QueuedThreadPool.java:1149)","\tat java.base/java.lang.Thread.run(Thread.java:840)"]}}
+HTTP 404
+
+$ SQL=SELECT\ count\(\*\)\ AS\ row_count\ FROM\ \{table\} make -s query
+2026-10-20 13:57:21,002 ERROR __main__: table default.events does not exist yet: no segment has been offloaded yet (produce more data or lower segment.bytes/segment.ms)
+make: *** [query] Error 3
+(exit code 2; make reports the tool's exit status 3 as 2)
+
+## the Parquet files are still in the warehouse bucket (orphaned: nothing points at them)
+
+$ scripts/mc.sh ls --recursive local/warehouse/default/events/data
+[2026-10-20 11:55:41 UTC]  76KiB STANDARD 00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet
+[2026-10-20 11:55:41 UTC]  77KiB STANDARD 00001-1792497340998-eed822e3-44f0-400a-9a4b-519291d6fc74-00001.parquet
+[2026-10-20 11:55:41 UTC]  78KiB STANDARD 00001-1792497341262-41e5d7ac-9365-4ff9-a2de-f6dbed9ba051-00001.parquet
+[2026-10-20 11:56:26 UTC]  56KiB STANDARD 00001-1792497386650-8fe2ffaa-bee4-4602-acff-22dc08fe15c5-00001.parquet
+[2026-10-20 11:56:27 UTC]  66KiB STANDARD 00001-1792497386953-acf40c5a-a4ae-4c31-a13d-5ae514c98a10-00001.parquet
+[2026-10-20 11:56:27 UTC]  62KiB STANDARD 00001-1792497387140-d96dbed3-15af-4175-86a8-43a804980f78-00001.parquet
+
+$ scripts/mc.sh du local/warehouse
+602KiB	41 objects	warehouse
+
+## reset: stage 2 is reset with make clean
+
+$ make clean
+docker compose --profile producer down --volumes --remove-orphans
+ Container continuo-streaming-lab-karapace-1  Stopping
+ Container continuo-streaming-lab-karapace-1  Stopped
+ Container continuo-streaming-lab-karapace-1  Removing
+ Container continuo-streaming-lab-karapace-1  Removed
+ Container continuo-streaming-lab-topic-init-1  Stopping
+ Container continuo-streaming-lab-topic-init-1  Stopped
+ Container continuo-streaming-lab-topic-init-1  Removing
+ Container continuo-streaming-lab-topic-init-1  Removed
+ Container continuo-streaming-lab-kafka-1-1  Stopping
+ Container continuo-streaming-lab-kafka-3-1  Stopping
+ Container continuo-streaming-lab-kafka-2-1  Stopping
+ Container continuo-streaming-lab-kafka-1-1  Stopped
+ Container continuo-streaming-lab-kafka-1-1  Removing
+ Container continuo-streaming-lab-kafka-1-1  Removed
+ Container continuo-streaming-lab-kafka-2-1  Stopped
+ Container continuo-streaming-lab-kafka-2-1  Removing
+ Container continuo-streaming-lab-kafka-2-1  Removed
+ Container continuo-streaming-lab-kafka-3-1  Stopped
+ Container continuo-streaming-lab-kafka-3-1  Removing
+ Container continuo-streaming-lab-kafka-3-1  Removed
+ Container continuo-streaming-lab-iceberg-rest-1  Stopping
+ Container continuo-streaming-lab-iceberg-rest-1  Stopped
+ Container continuo-streaming-lab-iceberg-rest-1  Removing
+ Container continuo-streaming-lab-iceberg-rest-1  Removed
+ Container continuo-streaming-lab-minio-init-1  Stopping
+ Container continuo-streaming-lab-minio-init-1  Stopped
+ Container continuo-streaming-lab-minio-init-1  Removing
+ Container continuo-streaming-lab-minio-init-1  Removed
+ Container continuo-streaming-lab-minio-1  Stopping
+ Container continuo-streaming-lab-minio-1  Stopped
+ Container continuo-streaming-lab-minio-1  Removing
+ Container continuo-streaming-lab-minio-1  Removed
+ Volume continuo-streaming-lab_kafka-3-data  Removing
+ Volume continuo-streaming-lab_minio-data  Removing
+ Volume continuo-streaming-lab_kafka-1-data  Removing
+ Volume continuo-streaming-lab_kafka-2-data  Removing
+ Network continuo-streaming-lab_default  Removing
+ Volume continuo-streaming-lab_kafka-3-data  Removed
+ Volume continuo-streaming-lab_minio-data  Removed
+ Volume continuo-streaming-lab_kafka-1-data  Removed
+ Volume continuo-streaming-lab_kafka-2-data  Removed
+ Network continuo-streaming-lab_default  Removed
+

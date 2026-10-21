@@ -1,0 +1,53 @@
+## all objects in the warehouse bucket
+
+$ scripts/mc.sh ls --recursive local/warehouse
+[2026-10-20 11:55:41 UTC]  76KiB STANDARD default/events/data/00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet
+[2026-10-20 11:55:41 UTC]  77KiB STANDARD default/events/data/00001-1792497340998-eed822e3-44f0-400a-9a4b-519291d6fc74-00001.parquet
+[2026-10-20 11:55:41 UTC]  78KiB STANDARD default/events/data/00001-1792497341262-41e5d7ac-9365-4ff9-a2de-f6dbed9ba051-00001.parquet
+[2026-10-20 11:55:40 UTC] 2.4KiB STANDARD default/events/metadata/00000-35422ee7-da2c-4254-8842-a78055472829.metadata.json
+[2026-10-20 11:55:40 UTC] 2.4KiB STANDARD default/events/metadata/00000-3f3a5d13-1fae-4ab2-b6b4-ba86bb0689c7.metadata.json
+[2026-10-20 11:55:40 UTC] 2.4KiB STANDARD default/events/metadata/00000-bd4704da-7721-497d-820f-05c876f1a389.metadata.json
+[2026-10-20 11:55:40 UTC] 3.2KiB STANDARD default/events/metadata/00001-8e513b27-c157-4877-892a-48c16d980dca.metadata.json
+[2026-10-20 11:55:40 UTC] 3.2KiB STANDARD default/events/metadata/00001-c3248006-77d4-42a6-837a-b99e578d0729.metadata.json
+[2026-10-20 11:55:40 UTC] 3.2KiB STANDARD default/events/metadata/00001-ef85f747-b4f8-47b3-925b-2dec7d4973a1.metadata.json
+[2026-10-20 11:55:40 UTC] 3.9KiB STANDARD default/events/metadata/00002-3d6c1042-e520-4d40-9273-89acc02c1a57.metadata.json
+[2026-10-20 11:55:41 UTC] 4.7KiB STANDARD default/events/metadata/00003-e4b27dea-af3d-4287-9b9d-14dd74678f67.metadata.json
+[2026-10-20 11:55:41 UTC] 6.3KiB STANDARD default/events/metadata/00004-1bd402d4-3d26-4895-9241-7c5098dbeed8.metadata.json
+[2026-10-20 11:55:41 UTC] 7.9KiB STANDARD default/events/metadata/00005-c38522a2-791c-4f0a-b194-f04ffda05062.metadata.json
+[2026-10-20 11:55:41 UTC] 9.5KiB STANDARD default/events/metadata/00006-8ce92e77-4914-4ad7-9212-7b1d62c135d0.metadata.json
+[2026-10-20 11:55:41 UTC] 1.1KiB STANDARD default/events/metadata/0W1FJzAxQL-8RRMI0_U0iw.puffin
+[2026-10-20 11:55:41 UTC] 8.8KiB STANDARD default/events/metadata/28b69620-9c85-4f6c-9e75-f88dbeb95545-m0.avro
+[2026-10-20 11:55:41 UTC] 1.1KiB STANDARD default/events/metadata/803LKYNPT12OGNiw16E7SQ.puffin
+[2026-10-20 11:55:41 UTC] 1.1KiB STANDARD default/events/metadata/YCCwZHwGSWynQHv7kGWejg.puffin
+[2026-10-20 11:55:41 UTC] 8.8KiB STANDARD default/events/metadata/d3923afc-387e-40ae-a2fa-51c048c1b96c-m0.avro
+[2026-10-20 11:55:41 UTC] 8.8KiB STANDARD default/events/metadata/fd566b51-7583-42e6-996e-5a45a4778735-m0.avro
+[2026-10-20 11:55:41 UTC] 4.4KiB STANDARD default/events/metadata/snap-2595478100305839292-1-28b69620-9c85-4f6c-9e75-f88dbeb95545.avro
+[2026-10-20 11:55:41 UTC] 4.5KiB STANDARD default/events/metadata/snap-3200045394815143255-1-d3923afc-387e-40ae-a2fa-51c048c1b96c.avro
+[2026-10-20 11:55:41 UTC] 4.4KiB STANDARD default/events/metadata/snap-5332940693406242099-1-fd566b51-7583-42e6-996e-5a45a4778735.avro
+[2026-10-20 11:55:40 UTC] 4.2KiB STANDARD default/events/metadata/snap-6193286676893174342-2-d379a590-66a1-4b52-9905-384d91856190.avro
+[2026-10-20 11:55:40 UTC] 4.2KiB STANDARD default/events/metadata/snap-7684635275227229231-1-7b07e924-e364-4eee-8d76-4bcb3649617c.avro
+[2026-10-20 11:55:41 UTC] 4.2KiB STANDARD default/events/metadata/snap-7922298868980548305-3-966c7a98-9099-4dea-84c1-d08fd1ab7b02.avro
+
+$ scripts/mc.sh du local/warehouse
+336KiB	26 objects	warehouse
+
+## one Parquet file: stat
+
+$ scripts/mc.sh stat local/warehouse/default/events/data/00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet
+Name      : 00001-1792497340739-9422644a-d8c2-4008-8aa8-67b25377e2cb-00001.parquet
+Date      : 2026-10-20 11:55:41 UTC 
+Size      : 76 KiB 
+ETag      : 58160c7896a716e803efb142793249dc 
+Type      : file 
+Checksum  : CRC32:kHpLUA==
+Metadata  :
+  Content-Type: application/octet-stream 
+
+
+## kafka-tiered after offload (stage 1 puts its segments here)
+
+$ scripts/mc.sh ls --recursive local/kafka-tiered
+
+$ scripts/mc.sh du local/kafka-tiered
+0B	0 objects	kafka-tiered
+

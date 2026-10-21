@@ -1,0 +1,78 @@
+$ make query SQL='DESCRIBE SELECT * FROM {table}'
+uv run python -m lab.query ${SQL:+--sql "$SQL"}
+2026-10-20 12:18:08,546 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-3c13b2b6-c683-47e5-b0a6-fa540e557585.metadata.json
+{"column_name": "kafka", "column_type": "STRUCT(\"partition\" INTEGER, \"offset\" BIGINT, \"timestamp\" BIGINT, batch_byte_offset INTEGER, batch_base_offset BIGINT, batch_partition_leader_epoch INTEGER, batch_magic INTEGER, batch_timestamp_type INTEGER, batch_compression_type INTEGER, batch_max_timestamp BIGINT, batch_producer_id BIGINT, batch_producer_epoch INTEGER, batch_base_sequence INTEGER)", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "headers", "column_type": "STRUCT(\"key\" VARCHAR, \"value\" BLOB)[]", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "key", "column_type": "VARCHAR", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "key_raw", "column_type": "BLOB", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "value", "column_type": "STRUCT(order_id VARCHAR, customer_id VARCHAR, event_type VARCHAR, amount_cents BIGINT, currency VARCHAR, event_ts_ms BIGINT)", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "value_raw", "column_type": "BLOB", "null": "YES", "key": null, "default": null, "extra": null}
+
+$ make query SQL='SELECT * FROM (DESCRIBE SELECT kafka.* FROM {table})'
+uv run python -m lab.query ${SQL:+--sql "$SQL"}
+2026-10-20 12:18:08,678 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-3c13b2b6-c683-47e5-b0a6-fa540e557585.metadata.json
+{"column_name": "partition", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "offset", "column_type": "BIGINT", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "timestamp", "column_type": "BIGINT", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_byte_offset", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_base_offset", "column_type": "BIGINT", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_partition_leader_epoch", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_magic", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_timestamp_type", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_compression_type", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_max_timestamp", "column_type": "BIGINT", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_producer_id", "column_type": "BIGINT", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_producer_epoch", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+{"column_name": "batch_base_sequence", "column_type": "INTEGER", "null": "YES", "key": null, "default": null, "extra": null}
+
+$ make query
+uv run python -m lab.query ${SQL:+--sql "$SQL"}
+2026-10-20 12:18:08,803 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-3c13b2b6-c683-47e5-b0a6-fa540e557585.metadata.json
+{"row_count": 20000, "partitions": 3, "min_offset": 0, "max_offset": 6784}
+
+$ make query SQL='SELECT 1 AS "my col", '"'"'$$x'"'"' AS d FROM {table} LIMIT 1'
+uv run python -m lab.query ${SQL:+--sql "$SQL"}
+2026-10-20 12:18:08,931 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-3c13b2b6-c683-47e5-b0a6-fa540e557585.metadata.json
+{"my col": 1, "d": "$x"}
+
+$ make query SQL='SELECT kafka.*, key, key_raw, value, value_raw FROM {table} QUALIFY row_number() OVER (PARTITION BY kafka.partition ORDER BY kafka."offset") <= 3 ORDER BY kafka.partition, kafka."offset"'
+uv run python -m lab.query ${SQL:+--sql "$SQL"}
+2026-10-20 12:18:09,054 INFO __main__: metadata location: s3://warehouse/default/events/metadata/00006-3c13b2b6-c683-47e5-b0a6-fa540e557585.metadata.json
+{"partition": 0, "offset": 0, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000000", "key_raw": null, "value": {"order_id": "o-000000000", "customer_id": "c-0069", "event_type": "order_cancelled", "amount_cents": 4235, "currency": "USD", "event_ts_ms": 1792491417787}, "value_raw": null}
+{"partition": 0, "offset": 1, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000002", "key_raw": null, "value": {"order_id": "o-000000002", "customer_id": "c-0242", "event_type": "order_cancelled", "amount_cents": 24978, "currency": "EUR", "event_ts_ms": 1792491418502}, "value_raw": null}
+{"partition": 0, "offset": 2, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000003", "key_raw": null, "value": {"order_id": "o-000000003", "customer_id": "c-0049", "event_type": "order_paid", "amount_cents": 1957, "currency": "USD", "event_ts_ms": 1792491418502}, "value_raw": null}
+{"partition": 1, "offset": 0, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000012", "key_raw": null, "value": {"order_id": "o-000000012", "customer_id": "c-0347", "event_type": "order_created", "amount_cents": 49969, "currency": "USD", "event_ts_ms": 1792491418502}, "value_raw": null}
+{"partition": 1, "offset": 1, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000014", "key_raw": null, "value": {"order_id": "o-000000014", "customer_id": "c-0429", "event_type": "order_cancelled", "amount_cents": 42193, "currency": "EUR", "event_ts_ms": 1792491418502}, "value_raw": null}
+{"partition": 1, "offset": 2, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000015", "key_raw": null, "value": {"order_id": "o-000000015", "customer_id": "c-0096", "event_type": "order_cancelled", "amount_cents": 47524, "currency": "USD", "event_ts_ms": 1792491418502}, "value_raw": null}
+{"partition": 2, "offset": 0, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000001", "key_raw": null, "value": {"order_id": "o-000000001", "customer_id": "c-0061", "event_type": "order_paid", "amount_cents": 49970, "currency": "USD", "event_ts_ms": 1792491418502}, "value_raw": null}
+{"partition": 2, "offset": 1, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000005", "key_raw": null, "value": {"order_id": "o-000000005", "customer_id": "c-0229", "event_type": "order_paid", "amount_cents": 47386, "currency": "EUR", "event_ts_ms": 1792491418502}, "value_raw": null}
+{"partition": 2, "offset": 2, "timestamp": 1792491418502, "batch_byte_offset": 0, "batch_base_offset": 0, "batch_partition_leader_epoch": 0, "batch_magic": 2, "batch_timestamp_type": 0, "batch_compression_type": 0, "batch_max_timestamp": 1792491418522, "batch_producer_id": 2000, "batch_producer_epoch": 0, "batch_base_sequence": 0, "key": "o-000000007", "key_raw": null, "value": {"order_id": "o-000000007", "customer_id": "c-0012", "event_type": "order_created", "amount_cents": 42668, "currency": "GBP", "event_ts_ms": 1792491418502}, "value_raw": null}
+
+$ docker compose run --rm --no-deps -T --entrypoint sh minio-init -c "mc alias set l http://minio:9000 minioadmin minioadmin >/dev/null && mc ls --recursive l/warehouse | head -30"
+[2026-10-20 10:17:33 UTC]  77KiB STANDARD default/events/data/00001-1792491452664-61965281-57aa-4df6-ad06-818dab16df85-00001.parquet
+[2026-10-20 10:17:33 UTC]  78KiB STANDARD default/events/data/00001-1792491452939-49052941-7b17-46e3-bb60-1c7078c0cb02-00001.parquet
+[2026-10-20 10:17:33 UTC]  76KiB STANDARD default/events/data/00001-1792491453336-803d5bfc-cf54-456c-94f3-4fcaf904c56c-00001.parquet
+[2026-10-20 10:17:32 UTC] 2.4KiB STANDARD default/events/metadata/00000-9257b845-2137-4d71-9ae0-df3a64e38969.metadata.json
+[2026-10-20 10:17:32 UTC] 2.4KiB STANDARD default/events/metadata/00000-a6b63c7f-aa80-4dae-b366-dd1c827b71a4.metadata.json
+[2026-10-20 10:17:32 UTC] 2.4KiB STANDARD default/events/metadata/00000-a7bff622-79f9-4dd8-83ba-9a04781b82f2.metadata.json
+[2026-10-20 10:17:32 UTC] 3.2KiB STANDARD default/events/metadata/00001-3bbb6928-8e52-437b-bb2c-d317db0a4d58.metadata.json
+[2026-10-20 10:17:32 UTC] 3.2KiB STANDARD default/events/metadata/00001-98aede7f-6829-4556-b21a-0dd4b5750fb9.metadata.json
+[2026-10-20 10:17:32 UTC] 3.1KiB STANDARD default/events/metadata/00001-9bd89677-0c38-4d7a-8d6c-698474d65791.metadata.json
+[2026-10-20 10:17:32 UTC] 3.9KiB STANDARD default/events/metadata/00002-49b3ad1d-712b-4be6-aa13-d1b75a979609.metadata.json
+[2026-10-20 10:17:32 UTC] 3.9KiB STANDARD default/events/metadata/00002-d9973df3-a14f-4833-b982-5c8ee058cf2d.metadata.json
+[2026-10-20 10:17:33 UTC] 4.7KiB STANDARD default/events/metadata/00003-5ff968d6-944e-47a7-9740-a3110edac559.metadata.json
+[2026-10-20 10:17:33 UTC] 6.3KiB STANDARD default/events/metadata/00004-dfd4de13-56b6-417a-8864-f7152981f138.metadata.json
+[2026-10-20 10:17:33 UTC] 7.1KiB STANDARD default/events/metadata/00005-6a3c1010-6f44-4045-97ec-8bc45333b758.metadata.json
+[2026-10-20 10:17:33 UTC] 8.7KiB STANDARD default/events/metadata/00006-3c13b2b6-c683-47e5-b0a6-fa540e557585.metadata.json
+[2026-10-20 10:17:33 UTC] 8.8KiB STANDARD default/events/metadata/1a92d423-4494-4163-9721-4b25705df4df-m0.avro
+[2026-10-20 10:17:33 UTC] 1.1KiB STANDARD default/events/metadata/6PsQffYARIKH-ZeYdNI79Q.puffin
+[2026-10-20 10:17:33 UTC] 8.8KiB STANDARD default/events/metadata/8b01ed80-77e0-4385-af78-99575d0d9d1d-m0.avro
+[2026-10-20 10:17:33 UTC] 8.8KiB STANDARD default/events/metadata/93c824eb-f655-47cd-9809-02ae6ecc8c86-m0.avro
+[2026-10-20 10:17:33 UTC] 1.1KiB STANDARD default/events/metadata/_7hXAbt_QmSG0iFbxV9w3w.puffin
+[2026-10-20 10:17:33 UTC] 1.1KiB STANDARD default/events/metadata/gRhmN6S1TZysDWLWHgm2dw.puffin
+[2026-10-20 10:17:33 UTC] 4.5KiB STANDARD default/events/metadata/snap-2512843035343310102-1-8b01ed80-77e0-4385-af78-99575d0d9d1d.avro
+[2026-10-20 10:17:32 UTC] 4.2KiB STANDARD default/events/metadata/snap-2796430318661488391-1-7c81db38-5760-4d74-ac67-c103c021d3d7.avro
+[2026-10-20 10:17:33 UTC] 4.2KiB STANDARD default/events/metadata/snap-3853777487928960583-3-6b1f71cd-1382-435b-883b-d9c91c3fb603.avro
+[2026-10-20 10:17:33 UTC] 4.4KiB STANDARD default/events/metadata/snap-5781216185116125766-2-1a92d423-4494-4163-9721-4b25705df4df.avro
+[2026-10-20 10:17:32 UTC] 4.2KiB STANDARD default/events/metadata/snap-835059058662986966-2-acbd6d63-fb4c-4ae4-8575-ecc2f9ac73cb.avro
+[2026-10-20 10:17:33 UTC] 4.4KiB STANDARD default/events/metadata/snap-8829151506131540319-1-93c824eb-f655-47cd-9809-02ae6ecc8c86.avro

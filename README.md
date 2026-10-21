@@ -3,9 +3,8 @@
 A local lab for Kafka tiered storage with Aiven's plugin, landing stream data in MinIO as raw
 segments (stage 1) and as Iceberg tables you can query with DuckDB (stage 2).
 
-Status: stage 1 (plain tiered storage on a 3-broker cluster, with a leader-failover experiment) is
-done and documented below. Stage 2 (Iceberg mode and DuckDB) is not part of this stage and is not
-described here; `STAGE=iceberg` in the Makefile points at a compose file that does not exist yet.
+Status: stage 1 (plain tiered storage on a 3-broker cluster, with a leader-failover experiment) and
+stage 2 (the broker writes an Iceberg table that DuckDB queries) are done and documented below.
 Credentials in this repo (`minioadmin`/`minioadmin`) are demo values for a local stack.
 
 License: Apache-2.0.
@@ -59,10 +58,10 @@ passed, only the new, empty active segment per partition remains (`0` bytes) on 
 ```bash
 make ls-minio
 ```
-Lists the objects in the `kafka-tiered` bucket, per partition, with the total size at the end (it
-reads `0 objects` until the first segment is uploaded). Each
-uploaded segment shows up as a `.log` (segment data), an `.indexes` object and an `.rsm-manifest`
-object.
+Lists the objects in both buckets, each under its own heading, with the total size at the end of
+each: `kafka-tiered` (stage 1 segments, per partition; it reads `0 objects` until the first segment is
+uploaded) and `warehouse` (stage 2 Iceberg table; empty in stage 1). Each uploaded stage 1 segment
+shows up as a `.log` (segment data), an `.indexes` object and an `.rsm-manifest` object.
 
 ```bash
 make replay
@@ -98,10 +97,10 @@ Shows which broker uploaded which segment (the lines the plugin's copy task logs
 make clean
 ```
 Removes the containers and all their data (this compose project's volumes only).
-`make down` stops the containers but keeps the data.
+`make down` stops the containers but keeps the data (in stage 2 it still loses the Iceberg catalog, see below).
 
 MinIO console: <http://localhost:9001>, user `minioadmin`, password `minioadmin` (demo values for
-this local stack, not for anything real). The bucket is `kafka-tiered`.
+this local stack, not for anything real). Stage 1 writes to the `kafka-tiered` bucket, stage 2 to `warehouse`.
 
 ### How it works
 
@@ -119,3 +118,47 @@ served by the plugin from the bucket, through that partition's leader.
   showed, with the evidence it is based on, and the surprises along the way.
 - [docs/findings/01b-leader-failover.md](docs/findings/01b-leader-failover.md): what happens to
   offload and replay when the leader of a partition is stopped.
+
+## Stage 2: Iceberg table, queried with DuckDB
+
+In Iceberg mode the Aiven plugin does not copy raw segments. It converts each uploaded segment to
+Parquet and commits it to an Iceberg table (`default.events`) in the `warehouse` bucket, through an
+Iceberg REST catalog. Nothing is written to `kafka-tiered`.
+
+```bash
+make clean && make up STAGE=iceberg
+make batch N=20000 STAGE=iceberg
+make query
+```
+
+`make query` asks the REST catalog only where the table's current metadata file is; DuckDB then reads
+the metadata, the manifests and the Parquet files directly from MinIO. With no argument it prints one
+JSON line (row count, partitions, offset range). Pass SQL with `make query SQL='...'` and write the
+table as `{table}`; on the make command line a literal dollar sign must be written `$$`. `make ls-minio`
+lists both buckets (`kafka-tiered`, empty in this mode, and `warehouse`). The first run needs internet once: DuckDB installs its `iceberg` and
+`httpfs` extensions.
+
+- Reset with `make clean`, not `make down`. The catalog is a SQLite file inside the `iceberg-rest`
+  container (the findings label this an inference: the stored location of that file was seen in an earlier
+  task, not in the committed transcripts). Observed: the table survives `docker compose restart
+  iceberg-rest`, but after `make down` and `make up STAGE=iceberg` the catalog is empty and the Parquet
+  files stay orphaned in `warehouse`.
+- Record keys must be Avro: the plugin reads the key through the schema registry as well. `STAGE=iceberg`
+  makes the producer send Avro keys; with string keys the brokers logged `Error deserializing schema ID` (all three brokers) / `Unknown magic byte!`
+  (seen on kafka-3 only in the transcript) and no table was created in the run recorded in the findings.
+- Rows appear only after a segment is uploaded. The last open segment of each partition uploads after
+  the idle roll, about 35 to 40 seconds after the last write, so until then `make query` reports no table
+  (the tool exits with status 3, which `make` reports as `Error 3`) or fewer rows.
+- Use the default 1 MiB segments: a producer batch larger than `segment.bytes` is rejected with
+  `RECORD_LIST_TOO_LARGE`.
+- Known alpha limits: duplicate rows are possible in principle (the findings count them for this run) and
+  schema evolution is not supported.
+
+Findings, with the evidence they are based on: [docs/findings/02-stage2-iceberg.md](docs/findings/02-stage2-iceberg.md). Freshness and leader-restart results (including that in Iceberg mode, with plugin 1.1.1, in the tested runs, the broker served tiered history under wrong offsets when a segment held several producer batches and a rebuilt batch started at the last record of one that held more than one record (Kafka 4.0.0, uncompressed, one producer), confirmed with Kafka's own tools and raw Fetch requests): [docs/findings/03-freshness-and-duplicates.md](docs/findings/03-freshness-and-duplicates.md).
+Upstream status, checked 2026-10-21: another user had already reported "Consuming from Iceberg topic results in incorrect
+behaviour" on the same plugin and Kafka versions ([#762](https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/issues/762)), and
+a fix ([#775](https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/pull/775) "Fix consumer infinite loop") is
+merged on the plugin's `main` but in no release; this lab runs v1.1.1 as released and did not test `main` (findings 03,
+"Upstream status").
+The scripts that produced the evidence are in `scripts/verify/`; the end-to-end check is
+`tests/smoke/04-iceberg.sh`.

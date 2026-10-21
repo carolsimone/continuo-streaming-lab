@@ -2,6 +2,9 @@ import json
 import threading
 import time
 
+import pytest
+from confluent_kafka.serialization import StringSerializer
+
 from lab import produce
 from lab.produce import main, parse_args
 
@@ -222,3 +225,179 @@ def test_build_producer_is_idempotent(monkeypatch):
     produce.build_producer("localhost:9092", "http://localhost:8081", "{}")
     assert captured["enable.idempotence"] is True
     assert captured["bootstrap.servers"] == "localhost:9092"
+
+
+def test_key_flag_defaults(monkeypatch):
+    monkeypatch.delenv("LAB_KEY_SERDE", raising=False)
+    monkeypatch.delenv("LAB_KEY_FIELD", raising=False)
+    args = parse_args([])
+    assert (args.key_serde, args.key_field) == ("string", "order_id")
+
+
+def test_key_flags_from_command_line():
+    args = parse_args(["--key-serde", "avro", "--key-field", "customer_id"])
+    assert (args.key_serde, args.key_field) == ("avro", "customer_id")
+
+
+def test_key_flag_defaults_come_from_environment(monkeypatch):
+    monkeypatch.setenv("LAB_KEY_SERDE", "avro")
+    monkeypatch.setenv("LAB_KEY_FIELD", "customer_id")
+    args = parse_args([])
+    assert (args.key_serde, args.key_field) == ("avro", "customer_id")
+    args = parse_args(["--key-serde", "string", "--key-field", "order_id"])  # the flag beats the environment
+    assert (args.key_serde, args.key_field) == ("string", "order_id")
+
+
+def test_empty_key_environment_means_default(monkeypatch):
+    # `make` and compose pass an empty string when the variable is unset.
+    monkeypatch.setenv("LAB_KEY_SERDE", "")
+    monkeypatch.setenv("LAB_KEY_FIELD", "")
+    args = parse_args([])
+    assert (args.key_serde, args.key_field) == ("string", "order_id")
+
+
+def test_invalid_key_values_are_rejected(monkeypatch):
+    with pytest.raises(SystemExit):
+        parse_args(["--key-serde", "json"])
+    with pytest.raises(SystemExit):
+        parse_args(["--key-field", "amount"])
+    monkeypatch.setenv("LAB_KEY_SERDE", "protobuf")  # a bad environment default is rejected too
+    with pytest.raises(SystemExit):
+        parse_args([])
+
+
+def test_send_uses_order_id_as_key_by_default():
+    fake = FakeProducer()
+    event = {"order_id": "o-1", "customer_id": "c-9"}
+    assert produce.send(fake, "events", event, lambda err, msg: None) is True
+    assert fake.sent[0][1] == "o-1"
+
+
+def test_send_uses_the_requested_key_field():
+    fake = FakeProducer()
+    event = {"order_id": "o-1", "customer_id": "c-9"}
+    produce.send(fake, "events", event, lambda err, msg: None, key_field="customer_id")
+    assert fake.sent[0][1] == "c-9"
+
+
+def test_run_keys_events_by_customer_id_and_customer_keys_repeat(monkeypatch):
+    fake = FakeProducer()
+    monkeypatch.setattr(produce, "build_producer", lambda *a, **k: fake)
+
+    produce.run(parse_args(["--count", "200", "--key-field", "customer_id"]), threading.Event())
+
+    assert all(key == value["customer_id"] for _, key, value in fake.sent)
+    assert len({key for _, key, _ in fake.sent}) < 200  # the same key is produced many times
+
+
+def test_run_passes_key_serde_to_build_producer(monkeypatch):
+    seen = {}
+
+    def fake_build(bootstrap, registry, schema_str, key_serde="string", **kwargs):
+        seen["key_serde"] = key_serde
+        return FakeProducer()
+
+    monkeypatch.setattr(produce, "build_producer", fake_build)
+    produce.run(parse_args(["--count", "1", "--key-serde", "avro"]), threading.Event())
+    assert seen["key_serde"] == "avro"
+
+
+def _build_with_fakes(monkeypatch, key_serde):
+    captured = {}
+    serializers = []
+
+    class FakeRegistry:
+        def __init__(self, conf):
+            pass
+
+        def get_subjects(self):
+            return []
+
+    class FakeSerializingProducer:
+        def __init__(self, conf):
+            captured.update(conf)
+
+    def fake_avro(registry, schema):
+        serializers.append(schema)
+        return ("avro", schema)
+
+    monkeypatch.setattr(produce, "SchemaRegistryClient", FakeRegistry)
+    monkeypatch.setattr(produce, "AvroSerializer", fake_avro)
+    monkeypatch.setattr(produce, "SerializingProducer", FakeSerializingProducer)
+    produce.build_producer("localhost:9092", "http://localhost:8081", '{"type": "record"}', key_serde)
+    return captured, serializers
+
+
+def test_build_producer_string_key_serde_is_the_default(monkeypatch):
+    captured, serializers = _build_with_fakes(monkeypatch, "string")
+    assert isinstance(captured["key.serializer"], StringSerializer)
+    assert serializers == ['{"type": "record"}']  # only the value is Avro
+
+
+def test_build_producer_avro_key_serde_registers_a_string_key_schema(monkeypatch):
+    captured, serializers = _build_with_fakes(monkeypatch, "avro")
+    assert captured["key.serializer"] == ("avro", '{"type": "string"}')
+    assert captured["value.serializer"] == ("avro", '{"type": "record"}')
+    assert serializers == ['{"type": "string"}', '{"type": "record"}']
+
+
+def test_batch_num_messages_default_is_unset(monkeypatch):
+    monkeypatch.delenv("LAB_BATCH_NUM_MESSAGES", raising=False)
+    assert parse_args([]).batch_num_messages is None
+
+
+def test_batch_num_messages_from_flag_and_environment(monkeypatch):
+    monkeypatch.setenv("LAB_BATCH_NUM_MESSAGES", "1")
+    assert parse_args([]).batch_num_messages == 1
+    assert parse_args(["--batch-num-messages", "7"]).batch_num_messages == 7
+
+
+def test_batch_num_messages_must_be_positive():
+    with pytest.raises(SystemExit):
+        parse_args(["--batch-num-messages", "0"])
+
+
+def test_build_producer_leaves_batch_num_messages_to_librdkafka_by_default(monkeypatch):
+    captured, _ = _build_with_fakes(monkeypatch, "string")
+    assert "batch.num.messages" not in captured
+
+
+def test_build_producer_sets_batch_num_messages_when_given(monkeypatch):
+    captured = {}
+
+    class FakeRegistry:
+        def __init__(self, conf):
+            pass
+
+        def get_subjects(self):
+            return []
+
+    class FakeSerializingProducer:
+        def __init__(self, conf):
+            captured.update(conf)
+
+    monkeypatch.setattr(produce, "SchemaRegistryClient", FakeRegistry)
+    monkeypatch.setattr(produce, "AvroSerializer", lambda registry, schema: object())
+    monkeypatch.setattr(produce, "SerializingProducer", FakeSerializingProducer)
+    produce.build_producer("localhost:9092", "http://localhost:8081", "{}", batch_num_messages=1)
+    assert captured["batch.num.messages"] == 1
+
+
+def test_run_passes_batch_num_messages_to_build_producer(monkeypatch):
+    seen = {}
+
+    def fake_build(bootstrap, registry, schema_str, key_serde="string", batch_num_messages=None):
+        seen["batch_num_messages"] = batch_num_messages
+        return FakeProducer()
+
+    monkeypatch.setattr(produce, "build_producer", fake_build)
+    produce.run(parse_args(["--count", "1", "--batch-num-messages", "1"]), threading.Event())
+    assert seen["batch_num_messages"] == 1
+
+
+def test_non_integer_batch_num_messages_environment_is_an_argparse_error(monkeypatch, capsys):
+    monkeypatch.setenv("LAB_BATCH_NUM_MESSAGES", "one")
+    with pytest.raises(SystemExit) as exc:
+        parse_args([])
+    assert exc.value.code == 2  # argparse usage error, not a ValueError traceback
+    assert "--batch-num-messages" in capsys.readouterr().err
