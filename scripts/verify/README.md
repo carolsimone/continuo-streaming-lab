@@ -32,4 +32,5 @@ Stage 2 experiments 6 and 7 (findings: `docs/findings/03-freshness-and-duplicate
    Kafka's `kafka-console-consumer.sh` on the local log and then on the tiered history, raw Fetch requests (`rawfetch.py`,
    standard library only) to each partition's leader, and `python -m lab.pairs` last for comparison. The helpers
    `cc_compare.py`, `dump_to_jsonl.py`, `rows_compare.py`, `index_vs_table.py` and `fetch_vs_table.py` compare these outputs
-   (standard library only; see each file's docstring). `KT_PACE`, `KT_BATCH` and `KT_DEEP` choose the batch (see the header).
+   (standard library only; see each file's docstring). `KT_PACE`, `KT_BATCH`, `KT_DEEP`, `KT_KEY_FIELD`, `KT_BATCH_NUM_MESSAGES` and
+   `KT_FIRST_LOCAL_RETENTION_MS` choose the run; the header lists the five committed transcripts and their settings.

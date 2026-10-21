@@ -92,4 +92,4 @@ From `stage2-key-partition.txt` (40000 rows: 20000 keyed `o-...` by `order_id`, 
 - Schema evolution (the README states it is unsupported by the alpha; this lab did not try to change the schema).
 - A catalog with durable storage; partitioned or sorted tables; compaction; table maintenance (the 11 metadata files were not expired or compacted).
 - Failure and duplicate scenarios listed under "Rows vs produced".
-- (Tested later, Task 13b in `03-freshness-and-duplicates.md`: `batch_base_offset` is right on every row, `batch_byte_offset` follows the segment's offset index.)
+- (Tested later, Task 13b in `03-freshness-and-duplicates.md`: `batch_base_offset` is right on every row; `batch_byte_offset` is the segment's offset-index lookup for the record's offset, which is what the plugin's write code stores.)

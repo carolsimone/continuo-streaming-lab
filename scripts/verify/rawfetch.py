@@ -3,7 +3,8 @@
 No Kafka client library is involved: a TCP socket, the Fetch wire format and the RecordBatch v2 format, decoded
 with the Python standard library only. For every batch in the response it reports the header fields (baseOffset,
 lastOffsetDelta, record count, producer id, baseSequence, CRC check) and, per record, offsetDelta and the key, so
-that the offsets the broker assigns can be checked against the batch header and against the table.
+that the offsets the broker assigns can be checked against the batch header and against the table. The value's first
+Avro string is kept as `order_id` (the first field of the lab's value schema), which names a record even when keys repeat.
 
 Usage: python3 rawfetch.py <host:port> <topic> <partition> <offset>[,<offset>...] [--walk N] [--records]
   --walk N   after each first fetch, fetch again N times at (last offset in the response + 1), as a consumer would
@@ -99,8 +100,10 @@ def parse_records(data: bytes, base_offset: int, count: int) -> list[dict]:
         key = None if key_len < 0 else data[pos:pos + key_len]
         pos += max(key_len, 0)
         value_len, pos = varint(data, pos)
+        value = None if value_len < 0 else data[pos:pos + value_len]
+        # order_id is the first field of the lab's value schema (v1 and v2), so it is the value's first Avro string.
         records.append({"offset_delta": offset_delta, "offset": base_offset + offset_delta,
-                        "key": avro_string(key), "value_bytes": value_len})
+                        "key": avro_string(key), "order_id": avro_string(value), "value_bytes": value_len})
         pos = end
     return records
 
@@ -162,8 +165,8 @@ def summarize(result: dict, with_records: bool) -> None:
                  b.get("last_key"))
         if with_records:
             for r in b.get("records", []):
-                log.info("    offsetDelta %d offset %d key %s value %d bytes", r["offset_delta"], r["offset"], r["key"],
-                         r["value_bytes"])
+                log.info("    offsetDelta %d offset %d key %s order_id %s value %d bytes", r["offset_delta"], r["offset"],
+                         r["key"], r["order_id"], r["value_bytes"])
 
 
 def main(argv: list[str] | None = None) -> int:
