@@ -2,7 +2,10 @@ import json
 
 import pytest
 
+from confluent_kafka import TopicPartition
+
 from lab import pairs
+from lab.catalog import TableNotFound
 from lab.pairs import compare, missing_ranges, parse_args, progress, replay_done
 
 
@@ -63,14 +66,18 @@ def test_compare_nonzero_log_start():
 
 
 def test_replay_done_needs_the_last_offset_of_every_partition():
-    seen = {0: [0, 1, 2], 1: [0]}
-    assert not replay_done(seen, {0: 0, 1: 0}, {0: 3, 1: 2})
-    seen[1].append(1)
-    assert replay_done(seen, {0: 0, 1: 0}, {0: 3, 1: 2})
+    last = {0: 2, 1: 0}  # highest offset delivered so far per partition
+    assert not replay_done(last, {0: 0, 1: 0}, {0: 3, 1: 2})
+    last[1] = 1
+    assert replay_done(last, {0: 0, 1: 0}, {0: 3, 1: 2})
 
 
 def test_replay_done_empty_partition_is_done():
-    assert replay_done({0: []}, {0: 4}, {0: 4})
+    assert replay_done({0: None}, {0: 4}, {0: 4})
+
+
+def test_replay_done_nothing_delivered_yet_is_not_done():
+    assert not replay_done({0: None}, {0: 0}, {0: 4})
 
 
 def test_parse_args_defaults():
@@ -99,7 +106,7 @@ def test_main_failure_exits_1_with_empty_stdout(monkeypatch, capsys):
 
 
 def test_progress_names_last_offset_and_end_offset_per_partition():
-    assert progress({0: [0, 1, 2], 1: []}, {0: 5, 1: 2}) == "p0 last 2 of end 5; p1 last none of end 2"
+    assert progress({0: 2, 1: None}, {0: 5, 1: 2}) == "p0 last 2 of end 5; p1 last none of end 2"
 
 
 class FakeMsg:
@@ -120,9 +127,10 @@ class FakeMsg:
 
 
 class FakeConsumer:
-    def __init__(self, msgs):
+    def __init__(self, msgs, positions=None):
         self.msgs = list(msgs)
         self.assigned = None
+        self.positions = positions or {}
 
     def assign(self, tps):
         self.assigned = tps
@@ -130,10 +138,13 @@ class FakeConsumer:
     def poll(self, _timeout):
         return self.msgs.pop(0) if self.msgs else None
 
+    def position(self, tps):
+        return [TopicPartition(tp.topic, tp.partition, self.positions.get(tp.partition, -1001)) for tp in tps]
+
 
 def test_replay_pairs_complete_keeps_raw_duplicates():
     consumer = FakeConsumer([FakeMsg(0, 0), FakeMsg(0, 1), FakeMsg(0, 1), FakeMsg(0, 2)])
-    got, status = pairs.replay_pairs(consumer, "events", {0: 0}, {0: 3}, timeout=5, idle=5)
+    got, status, _positions = pairs.replay_pairs(consumer, "events", {0: 0}, {0: 3}, timeout=5, idle=5)
     assert status == "complete"
     assert got == [(0, 0, "o-0"), (0, 1, "o-1"), (0, 1, "o-1"), (0, 2, "o-2")]
     assert len(consumer.assigned) == 1
@@ -141,10 +152,11 @@ def test_replay_pairs_complete_keeps_raw_duplicates():
 
 def test_replay_pairs_stalled_below_the_end_is_reported_not_raised(monkeypatch):
     monkeypatch.setattr(pairs.time, "monotonic", iter(range(0, 1000)).__next__)
-    consumer = FakeConsumer([FakeMsg(0, 0), FakeMsg(0, 1)])
-    got, status = pairs.replay_pairs(consumer, "events", {0: 0}, {0: 5}, timeout=500, idle=10)
+    consumer = FakeConsumer([FakeMsg(0, 0), FakeMsg(0, 1)], positions={0: 2})
+    got, status, positions = pairs.replay_pairs(consumer, "events", {0: 0}, {0: 5}, timeout=500, idle=10)
     assert got == [(0, 0, "o-0"), (0, 1, "o-1")]
     assert status == "no record for 10s"
+    assert positions == {"0": 2}  # where the consumer would fetch next when it stopped
 
 
 def test_content_report_flags_same_offset_with_different_record():
@@ -155,12 +167,16 @@ def test_content_report_flags_same_offset_with_different_record():
         "offsets_with_different_record": 1,
         "table_duplicate_order_ids": 0,
         "replay_duplicate_order_ids": 1,
+        "table_order_ids_not_in_replay": 1,  # "b" never came back
+        "replay_order_ids_not_in_table": 0,
     }
     assert r["partitions"]["1"]["offsets_with_different_record"] == 0
     assert r["totals"] == {
         "offsets_with_different_record": 1,
         "table_duplicate_order_ids": 0,
         "replay_duplicate_order_ids": 1,
+        "table_order_ids_not_in_replay": 1,
+        "replay_order_ids_not_in_table": 0,
     }
 
 
@@ -197,3 +213,83 @@ def test_retry_gives_up_with_the_last_error(monkeypatch):
 
     with pytest.raises(RuntimeError, match="down"):
         pairs.retry(always, attempts=2, delay=0.0, what="x")
+
+
+def test_content_report_counts_order_ids_on_one_side_only():
+    r = pairs.content_report([(0, 0, "a"), (0, 1, "b")], [(0, 0, "a"), (0, 1, "z"), (0, 1, "z")])
+    assert r["totals"]["table_order_ids_not_in_replay"] == 1  # "b"
+    assert r["totals"]["replay_order_ids_not_in_table"] == 1  # "z", counted once
+
+
+def test_compare_without_table_reports_replay_against_end_offsets_only():
+    r = compare(None, [(0, 0), (0, 1), (0, 1)], {0: 0}, {0: 3})
+    p0 = r["partitions"]["0"]
+    assert (p0["replay_rows"], p0["replay_duplicates"], p0["replay_missing"]) == (3, 1, 1)
+    assert p0["table_rows"] is None and p0["table_missing"] is None and p0["table_only"] is None
+    assert r["totals"]["table_rows"] is None
+    assert r["totals"]["replay_missing"] == 1
+
+
+def test_parse_args_debug_fetch_is_off_by_default():
+    assert parse_args([]).debug_fetch is False
+    assert parse_args(["--debug-fetch"]).debug_fetch is True
+
+
+class FakeMeta:
+    error = None
+    partitions = {0: object()}
+
+
+class FakeTopics:
+    topics = {"events": FakeMeta()}
+
+
+def _collect_with_fakes(monkeypatch, table_side, argv=()):
+    built = {}
+
+    class FakeDeserializingConsumer:
+        def __init__(self, conf):
+            built["conf"] = conf
+
+        def list_topics(self, _topic, timeout):
+            return FakeTopics()
+
+        def get_watermark_offsets(self, _tp, timeout, cached):
+            return (0, 2)
+
+        def close(self):
+            built["closed"] = True
+
+    monkeypatch.setattr(pairs, "DeserializingConsumer", FakeDeserializingConsumer)
+    monkeypatch.setattr(pairs, "SchemaRegistryClient", lambda conf: object())
+    monkeypatch.setattr(pairs, "AvroDeserializer", lambda registry: object())
+    monkeypatch.setattr(pairs, "table_triples", table_side)
+    replayed = [(0, 0, "o-0"), (0, 1, "o-1")]
+    monkeypatch.setattr(pairs, "replay_pairs", lambda *a, **k: (replayed, "complete", {"0": 2}))
+    return pairs.collect(parse_args(list(argv))), built
+
+
+def test_collect_without_the_table_still_reports_the_replay(monkeypatch):
+    def no_table(_args):
+        raise TableNotFound("default.events")
+
+    result, built = _collect_with_fakes(monkeypatch, no_table)
+    assert result["table_status"] == "not found: default.events"
+    assert result["content"] is None
+    assert result["totals"]["replay_rows"] == 2 and result["totals"]["replay_missing"] == 0
+    assert result["replay_positions"] == {"0": 2}
+    assert built["closed"]
+
+
+def test_collect_with_the_table_compares_both_sides(monkeypatch):
+    result, _ = _collect_with_fakes(monkeypatch, lambda _args: [(0, 0, "o-0"), (0, 1, "o-1")])
+    assert result["table_status"] == "ok"
+    assert result["totals"]["table_rows"] == 2
+    assert result["content"]["totals"]["offsets_with_different_record"] == 0
+
+
+def test_collect_debug_fetch_turns_on_librdkafka_fetch_debug(monkeypatch):
+    _, built = _collect_with_fakes(monkeypatch, lambda _args: [], argv=["--debug-fetch"])
+    assert built["conf"]["debug"] == "fetch"
+    _, built = _collect_with_fakes(monkeypatch, lambda _args: [])
+    assert "debug" not in built["conf"]

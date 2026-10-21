@@ -172,7 +172,7 @@ log_lines
 note "A) three-way comparison after the restart (leader of partition 0: broker ${new})"
 pairs_check A
 echo "\$ make replay   # the existing replay summary, for the record"
-(make -s replay 2>&1 || true) | grep -v ' INFO httpx' | grep -v rdkafka | cut -c1-400
+{ (make -s replay 2>&1 || true) | grep -v ' INFO httpx' | grep -v rdkafka | cut -c1-400; } || true  # under pipefail, a grep that filters every line must not stop the run
 echo
 key_check "after the restart"
 

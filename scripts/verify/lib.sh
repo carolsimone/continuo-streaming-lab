@@ -107,10 +107,15 @@ for p, v in r["partitions"].items():
           f"replay rows {v['replay_rows']}, duplicates {v['replay_duplicates']}, missing {v['replay_missing']} "
           f"{v['replay_missing_ranges']} | in table only {v['table_only']}, in replay only {v['replay_only']}")
 t = r["totals"]
-c = r["content"]["totals"]
-print(f"content: offsets whose record differs between table and replay {c['offsets_with_different_record']}, "
-      f"order_ids repeated in the replay {c['replay_duplicate_order_ids']}, in the table {c['table_duplicate_order_ids']}")
-print(f"replay status: {r['replay_status']}")
+c = (r.get("content") or {}).get("totals")
+if c is None:
+    print(f"content: not compared (table {r.get('table_status')})")
+else:
+    print(f"content: offsets whose record differs between table and replay {c['offsets_with_different_record']}, "
+          f"order_ids repeated in the replay {c['replay_duplicate_order_ids']}, in the table {c['table_duplicate_order_ids']}, "
+          f"order_ids in the table but not in the replay {c.get('table_order_ids_not_in_replay')}, "
+          f"in the replay but not in the table {c.get('replay_order_ids_not_in_table')}")
+print(f"replay status: {r['replay_status']}; consumer positions at the end {r.get('replay_positions')}")
 print(f"total: broker records {t['expected']}, table rows {t['table_rows']}, table duplicates {t['table_duplicates']}, "
       f"table missing {t['table_missing']}, replay rows {t['replay_rows']}, replay duplicates {t['replay_duplicates']}, "
       f"replay missing {t['replay_missing']}")
