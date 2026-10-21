@@ -55,7 +55,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument(
         "--batch-num-messages",
         type=int,
-        default=int(os.environ["LAB_BATCH_NUM_MESSAGES"]) if os.environ.get("LAB_BATCH_NUM_MESSAGES") else None,
+        # A string default goes through type=int too, so a bad environment value is a usage error, not a traceback.
+        default=os.environ.get("LAB_BATCH_NUM_MESSAGES") or None,
         help="librdkafka batch.num.messages, the most records per producer batch; unset = librdkafka's default "
         "(1 = one record per batch) [env LAB_BATCH_NUM_MESSAGES]",
     )

@@ -64,7 +64,12 @@ compare_cc() {  # compare_cc <label> <reference jsonl> <reference name>
 
 main() {
 set +e  # a failed step is printed, not fatal (wait_for still stops the run)
-note "settings: batch ${BATCH} at ${PACE}/s (0 = unthrottled), ${KEY_FIELD} keys (Avro), producer batch.num.messages ${BATCH_NUM:-librdkafka default}; topic: ${FIRST_LRMS:+recreated with segment.bytes=1048576 local.retention.ms=${FIRST_LRMS}, later 30000}${FIRST_LRMS:-default (segment.bytes=1048576, local.retention.ms=30000)}"
+if [[ -n "${FIRST_LRMS}" ]]; then  # if/else: ${X:+a}${X:-b} would print both a and the value of X
+  TOPIC_SETTINGS="recreated with segment.bytes=1048576 local.retention.ms=${FIRST_LRMS}, later 30000"
+else
+  TOPIC_SETTINGS="default (segment.bytes=1048576, local.retention.ms=30000)"
+fi
+note "settings: batch ${BATCH} at ${PACE}/s (0 = unthrottled), ${KEY_FIELD} keys (Avro), producer batch.num.messages ${BATCH_NUM:-librdkafka default}; topic: ${TOPIC_SETTINGS}"
 run make clean
 run make up STAGE=iceberg
 if [[ -n "${FIRST_LRMS}" ]]; then
@@ -91,7 +96,10 @@ grep -a '^baseOffset' "${TMP}/dump-p0.txt" | head -8 | sed -E 's/ (isTransaction
 echo "batch lines: $(grep -ac '^baseOffset' "${TMP}/dump-p0.txt"), record lines: $(grep -ac '^| offset' "${TMP}/dump-p0.txt"), isvalid false: $(grep -ac 'isvalid: false' "${TMP}/dump-p0.txt")"
 python3 -I ${V}/dump_to_jsonl.py 0 <"${TMP}/dump-p0.txt" >"${TMP}/dump-p0.jsonl"
 DUMPED="$(grep -ac '^| offset' "${TMP}/dump-p0.txt")"
-if (( DUMPED < END0 )); then
+if [[ -z "${END0}" ]]; then
+  echo "WARNING: the end offset of partition 0 could not be read, so the dump (${DUMPED} records) cannot be checked for"
+  echo "         completeness; the comparisons against the original segment below may cover only part of the partition"
+elif (( DUMPED < END0 )); then
   echo "WARNING: the dump holds ${DUMPED} records but partition 0 ends at ${END0}: later segments are not dumped, so"
   echo "         the comparisons against the original segment below cover offsets 0..$((DUMPED - 1)) only"
 fi

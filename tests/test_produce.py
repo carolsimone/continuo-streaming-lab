@@ -393,3 +393,11 @@ def test_run_passes_batch_num_messages_to_build_producer(monkeypatch):
     monkeypatch.setattr(produce, "build_producer", fake_build)
     produce.run(parse_args(["--count", "1", "--batch-num-messages", "1"]), threading.Event())
     assert seen["batch_num_messages"] == 1
+
+
+def test_non_integer_batch_num_messages_environment_is_an_argparse_error(monkeypatch, capsys):
+    monkeypatch.setenv("LAB_BATCH_NUM_MESSAGES", "one")
+    with pytest.raises(SystemExit) as exc:
+        parse_args([])
+    assert exc.value.code == 2  # argparse usage error, not a ValueError traceback
+    assert "--batch-num-messages" in capsys.readouterr().err

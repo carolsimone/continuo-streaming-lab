@@ -293,3 +293,14 @@ def test_collect_debug_fetch_turns_on_librdkafka_fetch_debug(monkeypatch):
     assert built["conf"]["debug"] == "fetch"
     _, built = _collect_with_fakes(monkeypatch, lambda _args: [])
     assert "debug" not in built["conf"]
+
+
+def test_replay_pairs_running_maximum_ignores_a_lower_offset_after_a_higher_one(monkeypatch, caplog):
+    # End offset 4, not 3: with 3 the replay is complete once offset 2 arrives and offset 1 is never polled.
+    monkeypatch.setattr(pairs.time, "monotonic", iter(range(0, 1000)).__next__)
+    consumer = FakeConsumer([FakeMsg(0, 0), FakeMsg(0, 2), FakeMsg(0, 1)], positions={0: 3})
+    with caplog.at_level("ERROR", logger=pairs.log.name):
+        got, status, _ = pairs.replay_pairs(consumer, "events", {0: 0}, {0: 4}, timeout=500, idle=10)
+    assert [o for _, o, _ in got] == [0, 2, 1]  # every delivery kept, in order
+    assert status == "no record for 10s"
+    assert "p0 last 2 of end 4" in caplog.text  # the maximum stays 2 after offset 1 arrives
